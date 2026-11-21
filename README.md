@@ -10,6 +10,9 @@ controller on an X-Pro Drax Apex.
   harmless hello, gets added deliberately, one command at a time, and logged in `docs/protocol.md`.
 - **No Fardriver code in this repo.** The APK, unpacked DLLs and decompiled source stay
   local and are ignored by git. Notes are in our own words.
+- **Never change the controller PIN** (factory default 3414). The tool has no PIN-change or
+  password/binding command, and tests make sure none can be sent. Entering the default PIN, as the
+  phone app does on every connect, is a separate question and not added yet.
 - Bike on and not being ridden when testing. Close the phone app first (one connection at a time).
 
 ## Setup
