@@ -283,3 +283,8 @@ current ceiling, boost >= max, low <= mid <= high gear <= limiter <= 6000 RPM, m
 curve never rising). High tier needs `acknowledge_risk`. Fault bits: live word 0xE3 (17 codes; 9 = phase
 current overflow, likely MAXAPACITY's "Error 09"). Every write is followed by a fault watch (6 s, 10 s for
 high tier); a new fault writes the previous value back automatically.
+- Live RAM-only tier test (`tools/test_tiers_live.py`, 2026-11-21): battery capacity 35 -> 36 (caution),
+  max line current 130 -> 125 A (high), power curve at 5000 RPM 75 -> 70 % (high). Each read back twice,
+  fault bits read before and after (System OK throughout, no new faults), each restored from the start
+  snapshot. End vs start: no setting changes, save count 134. The auto-revert branch has not run live
+  (it needs a real fault); it is covered only by code review so far.
