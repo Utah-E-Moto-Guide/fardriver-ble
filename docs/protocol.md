@@ -114,3 +114,13 @@ Against a settings export from 2026-09-26 (owner's Dropbox, not committed):
   blocks the app's backup omits, so diffs now treat every word outside the `.heb` as runtime data.
 - 0x22..0x24 = last settings-save timestamp, bytes (yy,mon)(day,hour)(min,sec). Factory value 2026-05-23 11:22:37
   matches the serial's `260523`; after the owner's September edits it reads 2026-09-27 07:15:32.
+
+## Third-party app audit (2026-11-21)
+
+Snapshots `before-export-1`, `before-export-2` (1 min apart, control), owner connects with a third-party app, browses,
+changes and saves nothing, closes it, power-cycles the bike, then `after-export`.
+- Control drift in 1 min: 0xF8 only.
+- before-2 -> after: **0 of 156 backed-up words changed; save timestamp unchanged.** Only runtime words moved
+  (0xDC, 0xDD, 0xE0, 0xF4, 0xF5, 0xF6, 0xF8), all seen drifting earlier today; the power cycle covers them.
+- Conclusion: connecting and browsing with a third-party app writes nothing to the settings we can read. Not covered: the
+  unread 56..87 section, what a third-party app does on Save, and anything it sends to its own servers.
