@@ -1,0 +1,119 @@
+# Tuning knowledge for the Fardriver controller on the owner's X-Pro Drax Apex.
+#
+# Every claim carries a source:
+#   manual    Fardriver "adjustment instructions of the control parameters" PDF (far-driver.com)
+#   app       the official app's own labels, limits and code
+#   export   the settings export label
+#   owner     something the owner said (dated); first-hand only
+#   session   a logged tuning session result (added by the tune tool)
+#   community forum / community notes; treat as claims, not facts
+#   reasoning our inference; lowest confidence, say so when using it
+# confidence: high | medium | low
+#
+# `settable: true` fields can be changed by the tune tool; everything else is read-only
+# context for advice and audits. Field names match fardriver_ble/address_map.py.
+
+settable:
+  - field: Throttle acceleration step
+    plain: How fast the motor's output ramps up when you open the throttle. Higher is snappier.
+    raw_range: [2, 224]   # app limit; the manual describes 16..224
+    max_step: 16
+    notes:
+      - {source: manual, confidence: high, text: "Called acceleration sensitivity. 16..224; higher number = more sensitive. 16 is already very slow."}
+      - {source: manual, confidence: high, text: "Electric cars ~32 and rarely above 64. E-motorcycles 32, many prefer 64 or 128 for quick response. Track racing up to 224."}
+      - {source: owner, confidence: high, text: "Factory value was 175; the owner set it to 64 (confirmed 2026-11-21)."}
+      - {source: owner, confidence: high, text: "On the Apex the limit on climbs is traction: the rear end spins out; the motor never runs out of pull (2026-11-08)."}
+      - {source: reasoning, confidence: low, text: "A softer ramp makes it easier to feed power in without breaking the rear tire loose on loose climbs; too soft can feel laggy when you need a quick hop."}
+  - field: Throttle deceleration step
+    plain: How fast output drops when you close the throttle.
+    raw_range: [4, 224]
+    max_step: 16
+    notes:
+      - {source: app, confidence: high, text: "App label 'Throttle Dec Step'; accepts 4..224."}
+      - {source: owner, confidence: high, text: "Factory 128; the owner set it to 64 (confirmed 2026-11-21)."}
+      - {source: reasoning, confidence: low, text: "Lower should make roll-off gentler (less abrupt engine-brake-like change), higher makes the bike settle faster when you chop the throttle."}
+  - field: Throttle release response
+    plain: Response when the throttle is released (exact behaviour not documented).
+    raw_range: [0, 192]
+    max_step: 16
+    notes:
+      - {source: app, confidence: high, text: "App field 'FreeThrottle', accepts 0..192."}
+      - {source: export, confidence: medium, text: "a third-party app calls it 'Throttle-release response'. Owner's value is 0."}
+      - {source: reasoning, confidence: low, text: "Meaning is uncertain; change only in small steps and describe the feel carefully."}
+  - field: Acceleration curve update interval
+    plain: How often the throttle ramp is updated. Shown in the app as (raw + 1) x 2 ms.
+    raw_range: [4, 1000]
+    max_step: 10
+    notes:
+      - {source: app, confidence: high, text: "App field 'CurveTime', accepts raw 4..1000, displays (raw+1)*2 ms. Owner's raw 49 = 100 ms."}
+      - {source: export, confidence: medium, text: "a third-party app: 'Acceleration-curve update interval'."}
+      - {source: reasoning, confidence: low, text: "A longer interval probably stretches the ramp (smoother, slower); works together with the acceleration step."}
+  - field: Throttle response profile (0 Line, 1 Sport, 2 ECO)
+    plain: Overall throttle character. 0 = Line, 1 = Sport, 2 = ECO.
+    raw_range: [0, 2]
+    max_step: 2
+    notes:
+      - {source: app, confidence: high, text: "App menu 'ThrottleResponse: 0-Line, 1-Sport, 2-ECO'."}
+      - {source: owner, confidence: high, text: "Was Sport (factory); the owner set ECO (confirmed 2026-11-21)."}
+      - {source: reasoning, confidence: low, text: "ECO probably applies the ECO acceleration coefficient; Line is likely a direct (linear) map. Unverified."}
+  - field: ECO acceleration coefficient
+    plain: Acceleration strength used in the ECO throttle profile, 1..8.
+    raw_range: [1, 8]
+    max_step: 2
+    notes:
+      - {source: app, confidence: high, text: "App menu 'ECO Acc' 1..8; the app only writes it when it is already non-zero."}
+      - {source: owner, confidence: medium, text: "Reads 8 (the maximum) on the owner's controller, 2026-11-21."}
+      - {source: reasoning, confidence: low, text: "Only matters while the profile is ECO."}
+
+context:
+  - field: High gear phase current
+    notes:
+      - {source: manual, confidence: high, text: "Maximum phase current sets the torque from standstill to rated speed. Never set above the factory value: the controller is much more likely to burn out."}
+  - field: High gear line current
+    notes:
+      - {source: manual, confidence: high, text: "Maximum battery (bus) current; sets maximum power: input power = battery voltage x line current."}
+  - field: Mid gear phase current ratio
+    notes:
+      - {source: manual, confidence: high, text: "Typical mid gear: phase 75% (starting push), line 50% (top speed) of the maximums. Low gear: phase 50%, line 25%."}
+  - field: Regen current (maximum)
+    notes:
+      - {source: manual, confidence: high, text: "Electronic braking uses 'stop reflux' (normal) current, limited by maximum reflux. Maximum is generally 25-50% larger than normal. E-brake must be enabled in the follow settings."}
+  - field: Low-voltage cutoff
+    notes:
+      - {source: manual, confidence: high, text: "Suggested under-voltage points: 48V 42, 60V 52.5, 72V 63, 84V 73.5, 96V 84, 108V 94.5. Output is reduced near this point to protect the battery."}
+  - field: Throttle closed voltage
+    notes:
+      - {source: manual, confidence: high, text: "Set 0.2-0.3 V above the throttle's idle voltage (e-motorcycle grips idle at 0.8-0.9 V, so about 1.1 V)."}
+  - field: Throttle full voltage
+    notes:
+      - {source: manual, confidence: high, text: "Set below the grip's full-twist voltage (grips read 4.1-4.3 V; 3.9 V is the example). Anything 0.6 V above this threshold is treated as a broken throttle and output stops."}
+  - field: Power curve at 5000 RPM
+    notes:
+      - {source: manual, confidence: high, text: "The RPM current-limit curve controls field weakening (speed above rated). Start safe and raise gradually; unstable idle or MOE/OVER faults mean too much field weakening, so change it back."}
+  - field: Motor matching LM (smoothness; manual default 22)
+    notes:
+      - {source: manual, confidence: high, text: "Default 22. Only lower it (16, 14, 12...) to cure low/mid-speed jitter; too low loses current control and can burn the controller. If lowering doesn't help, put it back to 22."}
+  - field: Motor type constant AN (0 surface-mount, 16 IPM)
+    notes:
+      - {source: manual, confidence: high, text: "Must match the motor: surface-mount 0, IPM 16, embedded mid-drive at least 8. Wrong AN gives poor starts and MOE/OVER faults."}
+  - field: Current loop start KI
+    notes:
+      - {source: manual, confidence: high, text: "PID values must not be changed casually; wrong values cause abnormal running or burn the controller. Medium-power default 4/8/12 KI, 40/80/120 KP."}
+  - field: Battery capacity
+    notes:
+      - {source: owner, confidence: high, text: "Factory 20 Ah; the owner set 35 (confirmed 2026-11-21). Used for the controller's state-of-charge estimate."}
+
+# Audit rules: informational flags comparing settings with the manual. Not necessarily wrong.
+audit:
+  - id: low_voltage_cutoff
+    source: manual
+    text: "Manual suggests a cutoff near 63 V for a 72 V pack."
+  - id: regen_ratio
+    source: manual
+    text: "Manual: maximum regen is generally 25-50% above normal regen."
+  - id: gear_ratios
+    source: manual
+    text: "Manual typical: mid 75% phase / 50% line, low 50% / 25%."
+  - id: throttle_full_alarm
+    source: manual
+    text: "A grip reading more than 0.6 V above the full-throttle threshold is treated as a fault and cuts output."

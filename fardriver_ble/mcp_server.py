@@ -15,6 +15,29 @@ from mcp.server.mcpserver import MCPServer
 from . import snapshot as snap
 from .__main__ import scan
 
+import functools
+import inspect
+
+
+def refusals_as_text(fn):
+    """Return a plain message for guard refusals instead of a traceback."""
+    if inspect.iscoroutinefunction(fn):
+        @functools.wraps(fn)
+        async def wrapper(*a, **k):
+            try:
+                return await fn(*a, **k)
+            except (PermissionError, RuntimeError, ValueError) as e:
+                return f"REFUSED: {e}"
+    else:
+        @functools.wraps(fn)
+        def wrapper(*a, **k):
+            try:
+                return fn(*a, **k)
+            except (PermissionError, RuntimeError, ValueError) as e:
+                return f"REFUSED: {e}"
+    return wrapper
+
+
 mcp = MCPServer(
     "fardriver",
     instructions="Read-only backups of a Fardriver motor controller over Bluetooth. No tool changes settings.",
@@ -22,12 +45,14 @@ mcp = MCPServer(
 
 
 @mcp.tool()
+@refusals_as_text
 async def fardriver_scan(seconds: float = 8.0) -> str:
     """Scan for nearby Fardriver controllers (names containing YUANQU, CONTROL or BMS)."""
     return json.dumps(await scan(seconds), indent=2)
 
 
 @mcp.tool()
+@refusals_as_text
 async def fardriver_snapshot(mac: str, label: str = "") -> str:
     """Read the controller's full settings over BLE and save a dated snapshot with a .heb backup.
 
@@ -40,12 +65,14 @@ async def fardriver_snapshot(mac: str, label: str = "") -> str:
 
 
 @mcp.tool()
+@refusals_as_text
 def fardriver_list_snapshots() -> str:
     """List saved snapshots, oldest first."""
     return json.dumps(snap.list_snapshots(), indent=2)
 
 
 @mcp.tool()
+@refusals_as_text
 def fardriver_diff(old: str, new: str = "") -> str:
     """Compare two snapshots (names from fardriver_list_snapshots, or a .heb file path).
 
@@ -57,6 +84,7 @@ def fardriver_diff(old: str, new: str = "") -> str:
 
 
 @mcp.tool()
+@refusals_as_text
 def fardriver_show(name: str = "", kind: str = "setting") -> str:
     """Decode a snapshot's fields (default: latest snapshot, settings only).
 
@@ -72,6 +100,7 @@ def fardriver_show(name: str = "", kind: str = "setting") -> str:
 
 
 @mcp.tool()
+@refusals_as_text
 def fardriver_settable() -> str:
     """Settings fardriver_set may change, with the app's raw limits. Everything else is refused."""
     from .nudge import NUDGEABLE, _field
@@ -81,6 +110,7 @@ def fardriver_settable() -> str:
 
 
 @mcp.tool()
+@refusals_as_text
 async def fardriver_set(
     mac: str, field: str, value: int | None = None, restore_from: str = "", save: bool = False
 ) -> str:
@@ -98,6 +128,115 @@ async def fardriver_set(
     r = await nudge(mac, field, value, label="mcp-set", restore_from=restore_from or None, save=save)
     diff = r.pop("diff", "")
     return json.dumps(r, indent=1) + ("\n\n" + diff if diff else "")
+
+
+# --- guided tuning (garage-to-trail loop) ------------------------------------
+# Method lives in skills/fardriver-tune/SKILL.md. Knowledge in knowledge/settings.yml.
+
+
+@mcp.tool()
+@refusals_as_text
+def tune_knowledge(field: str = "") -> str:
+    """Sourced tuning knowledge. No field: the tunable settings and the context notes.
+
+    Each note has a source (manual, app, export, owner, session, community, reasoning) and a
+    confidence. Say which source an idea comes from; never present reasoning as fact.
+    """
+    from . import tune
+
+    if field:
+        return json.dumps(tune.knowledge_for(field) or {"error": f"no notes for {field!r}"}, indent=1)
+    return json.dumps(tune.knowledge(), indent=1)
+
+
+@mcp.tool()
+@refusals_as_text
+def tune_audit(snapshot: str = "") -> str:
+    """Compare a snapshot (default: latest) with the manual's guidance. Flags are questions, not errors."""
+    from . import tune
+
+    name = snapshot or snap.list_snapshots()[-1]["name"]
+    return json.dumps({"snapshot": name, "flags": tune.audit(snap.load(name))}, indent=1)
+
+
+@mcp.tool()
+@refusals_as_text
+async def tune_start(mac: str, goal: str) -> str:
+    """Open a tuning session: records the owner's goal (their words) and takes a baseline snapshot."""
+    from . import tune
+
+    return json.dumps(await tune.start(mac, goal), indent=1)
+
+
+@mcp.tool()
+@refusals_as_text
+async def tune_try(mac: str, field: str, value: int, save: bool = False) -> str:
+    """Try ONE change (raw value, within the field's max step). RAM-only unless save=True.
+
+    RAM-only changes vanish when the key goes off, so tell the owner to keep the bike on until the ride
+    is done, or ask whether to save the trial (reversible by tune_revert, which saves the old value back).
+    """
+    from . import tune
+
+    r = await tune.try_change(mac, field, value, save=save)
+    diff = r.pop("diff", "") if isinstance(r, dict) else ""
+    return json.dumps(r, indent=1) + ("\n\n" + diff if diff else "")
+
+
+@mcp.tool()
+@refusals_as_text
+async def tune_feedback(mac: str, notes: str) -> str:
+    """Record how the open change felt, in the owner's words, and check it was still active."""
+    from . import tune
+
+    return json.dumps(await tune.feedback(mac, notes), indent=1)
+
+
+@mcp.tool()
+@refusals_as_text
+async def tune_keep(mac: str) -> str:
+    """Make the open change permanent (Save). Only after the owner explicitly says to keep it."""
+    from . import tune
+
+    r = await tune.keep(mac)
+    diff = r.pop("diff", "")
+    return json.dumps(r, indent=1) + ("\n\n" + diff if diff else "")
+
+
+@mcp.tool()
+@refusals_as_text
+async def tune_revert(mac: str) -> str:
+    """Put the open change back to its previous value (saves only if the trial had been saved)."""
+    from . import tune
+
+    return json.dumps(await tune.revert(mac), indent=1)
+
+
+@mcp.tool()
+@refusals_as_text
+def tune_finish(summary: str = "") -> str:
+    """Close the open session with a short summary of what was learned."""
+    from . import tune
+
+    return json.dumps(tune.finish(summary), indent=1)
+
+
+@mcp.tool()
+@refusals_as_text
+def tune_status() -> str:
+    """The open session (goal, trials, notes), or null."""
+    from . import tune
+
+    return json.dumps(tune.current_session(), indent=1)
+
+
+@mcp.tool()
+@refusals_as_text
+def tune_history() -> str:
+    """All tuning sessions: goals, changes, how they felt and whether they were kept. Evidence for advice."""
+    from . import tune
+
+    return json.dumps(tune.history(), indent=1)
 
 
 if __name__ == "__main__":

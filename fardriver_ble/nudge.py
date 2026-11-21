@@ -78,11 +78,11 @@ def setting_frame(name: str, raw: int, current_word: int = 0) -> bytes:
     return body + crc16_bytes(body)
 
 
-def check_step(name: str, current: int, new: int, restore_value: int | None) -> None:
+def check_step(name: str, current: int, new: int, restore_value: int | None, max_step: int = 1) -> None:
     if new == restore_value:
         return
-    if abs(new - current) != 1:
-        raise ValueError(f"{name}: {current} -> {new} is more than one step (use --restore-from to go back)")
+    if abs(new - current) > max_step:
+        raise ValueError(f"{name}: {current} -> {new} is more than {max_step} step(s) (use --restore-from to go back)")
 
 
 async def _write_and_verify(
@@ -220,7 +220,7 @@ async def _send_save(mac: str, log_dir: Path) -> dict:
 
 async def nudge(
     mac: str, name: str, value: int | None = None, label: str = "nudge",
-    restore_from: str | None = None, save: bool = False,
+    restore_from: str | None = None, save: bool = False, max_step: int = 1,
 ) -> dict:
     """Set one allowed field (raw units). value=None with restore_from puts back that snapshot's value."""
     f = _field(name)
@@ -236,7 +236,7 @@ async def nudge(
     current = f.raw(word)
     if value == current:
         return {"field": name, "unchanged": True, "value": current, "display": f.value(word), "unit": f.unit}
-    check_step(name, current, value, restore_value)
+    check_step(name, current, value, restore_value, max_step)
     target = new_word(name, value, word)
     bdir = snap.save(before, label=f"{label}-before")
     result = await _write_and_verify(mac, name, value, word, snap.REPO / "captures" / f"{bdir.name}-write")
