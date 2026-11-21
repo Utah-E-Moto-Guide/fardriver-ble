@@ -227,3 +227,15 @@ Frame `AA C6 2F 2F 41 00 89 A0`. Snapshots `accel-65-before` / `accel-65-after`:
   before snapshot: no setting changes, save count 132, stamp unchanged. **Confirmed: a setting write without
   Save is RAM-only and a power cycle undoes it.** Flash only changes on Save (`88 04` to 0xA0), which the
   tool cannot send.
+
+## First Save from our tool (2026-11-21)
+
+`nudge.py --save`: nudge 64 -> 65, pre-save check (working memory = saved state + only that field), then the app's
+Save sequence: local time to 0x22 (`AA CA 22 22 yy mm dd hh mi ss crc`) and `AA C6 A0 A0 88 04 C5 0C`.
+Our frame builder reproduces the community-documented factory-reset frame `AA C6 A0 A0 88 08 C5 09` exactly
+(computed in a test, never sent), which confirms the command frame format.
+Result (`accel-65-save-saved`): save count 132 -> 133, stamp 2026-11-21 15:09:54, throttle accel 65,
+**0xB9 10699 -> 5083**. 0xB9 changes on Save only (not on the unsaved nudge). ~300 checksum variants over three
+known values match nothing. 0xDC..0xE1 move both ways, so they're live, not counters.
+Next: power cycle (expect 65 to persist), then nudge back to 64 with Save; if 0xB9 returns to 10699 it
+depends only on settings content.
