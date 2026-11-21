@@ -6,7 +6,9 @@
 #   gdriver   the GDriver XLSX label
 #   owner     something the owner said (dated); first-hand only
 #   session   a logged tuning session result (added by the tune tool)
-#   community forum / community notes; treat as claims, not facts
+#   community forum / community notes; treat as claims, not facts.
+#             MAXAPACITY = the MAXAPACITY "DRAX Apex FarDriver tuning guide" (last updated 2026-11-21),
+#             built from Apex owners' app screenshots and ride reports.
 #   reasoning our inference; lowest confidence, say so when using it
 # confidence: high | medium | low
 #
@@ -22,6 +24,8 @@ settable:
       - {source: manual, confidence: high, text: "Called acceleration sensitivity. 16..224; higher number = more sensitive. 16 is already very slow."}
       - {source: manual, confidence: high, text: "Electric cars ~32 and rarely above 64. E-motorcycles 32, many prefer 64 or 128 for quick response. Track racing up to 224."}
       - {source: owner, confidence: high, text: "Factory value was 175; the owner set it to 64 (confirmed 2026-11-21)."}
+      - {source: community, confidence: medium, text: "MAXAPACITY lists factory 'Acc step 224' on the Apex dump they used; this owner's controller read 175 at the factory save stamp. Batch difference or a screenshot misread (the guide admits four such misreads)."}
+      - {source: community, confidence: low, text: "CONFLICT: MAXAPACITY says 'lower is snappier, harder on the drivetrain' (proposes 224 -> 200). The Fardriver manual says higher = more sensitive. Unresolved; the owner's own 175 -> 64 experience should settle it. Ask before advising a direction."}
       - {source: owner, confidence: high, text: "On the Apex the limit on climbs is traction: the rear end spins out; the motor never runs out of pull (2026-11-08)."}
       - {source: reasoning, confidence: low, text: "A softer ramp makes it easier to feed power in without breaking the rear tire loose on loose climbs; too soft can feel laggy when you need a quick hop."}
   - field: Throttle deceleration step
@@ -31,6 +35,7 @@ settable:
     notes:
       - {source: app, confidence: high, text: "App label 'Throttle Dec Step'; accepts 4..224."}
       - {source: owner, confidence: high, text: "Factory 128; the owner set it to 64 (confirmed 2026-11-21)."}
+      - {source: community, confidence: medium, text: "MAXAPACITY's stock Apex dump also shows Dec step 128."}
       - {source: reasoning, confidence: low, text: "Lower should make roll-off gentler (less abrupt engine-brake-like change), higher makes the bike settle faster when you chop the throttle."}
   - field: Throttle release response
     plain: Response when the throttle is released (exact behaviour not documented).
@@ -55,6 +60,7 @@ settable:
     notes:
       - {source: app, confidence: high, text: "App menu 'ThrottleResponse: 0-Line, 1-Sport, 2-ECO'."}
       - {source: owner, confidence: high, text: "Was Sport (factory); the owner set ECO (confirmed 2026-11-21)."}
+      - {source: community, confidence: medium, text: "MAXAPACITY's stock Apex dump shows throttle response 1-Sport, matching this bike's factory value."}
       - {source: reasoning, confidence: low, text: "ECO probably applies the ECO acceleration coefficient; Line is likely a direct (linear) map. Unverified."}
   - field: ECO acceleration coefficient
     plain: Acceleration strength used in the ECO throttle profile, 1..8.
@@ -69,12 +75,14 @@ context:
   - field: High gear phase current
     notes:
       - {source: manual, confidence: high, text: "Maximum phase current sets the torque from standstill to rated speed. Never set above the factory value: the controller is much more likely to burn out."}
+      - {source: community, confidence: medium, text: "MAXAPACITY: controller WC72V150AB_17_1ZHA80, case label 150A/405A; firmware ships 130A line / 350A phase (boost 360A). Owner reports: 140A/380A (all four currents together) ridden daily without faults by one owner; 145A/400A gave another owner Error 09, slow take-off and degraded gears 2-3, cleared by restoring stock. Not tunable in this tool."}
   - field: High gear line current
     notes:
       - {source: manual, confidence: high, text: "Maximum battery (bus) current; sets maximum power: input power = battery voltage x line current."}
   - field: Mid gear phase current ratio
     notes:
       - {source: manual, confidence: high, text: "Typical mid gear: phase 75% (starting push), line 50% (top speed) of the maximums. Low gear: phase 50%, line 25%."}
+      - {source: community, confidence: medium, text: "MAXAPACITY: Apex factory line ratios 60% low / 80% mid; they propose 70/90 as untested ('Experimental'). Their simple-mode gear speeds 35/23/15% match gear RPM / 12000 (4200, 2800, 1800)."}
   - field: Regen current (maximum)
     notes:
       - {source: manual, confidence: high, text: "Electronic braking uses 'stop reflux' (normal) current, limited by maximum reflux. Maximum is generally 25-50% larger than normal. E-brake must be enabled in the follow settings."}
@@ -90,6 +98,7 @@ context:
   - field: Power curve at 5000 RPM
     notes:
       - {source: manual, confidence: high, text: "The RPM current-limit curve controls field weakening (speed above rated). Start safe and raise gradually; unstable idle or MOE/OVER faults mean too much field weakening, so change it back."}
+      - {source: community, confidence: medium, text: "MAXAPACITY: the Apex curve is near-flat to 5000 RPM (75%) then drops to 1% at 5500 and 0% at 6000, which they think is the real top-end wall (not gear high speed). Experimental lever, not recommended."}
   - field: Motor matching LM (smoothness; manual default 22)
     notes:
       - {source: manual, confidence: high, text: "Default 22. Only lower it (16, 14, 12...) to cure low/mid-speed jitter; too low loses current control and can burn the controller. If lowering doesn't help, put it back to 22."}
@@ -102,6 +111,7 @@ context:
   - field: Battery capacity
     notes:
       - {source: owner, confidence: high, text: "Factory 20 Ah; the owner set 35 (confirmed 2026-11-21). Used for the controller's state-of-charge estimate."}
+      - {source: community, confidence: medium, text: "MAXAPACITY: the Apex pack label reads 72V 35Ah (2,520 Wh), 150A max discharge, 10A max charge, while the controller ships at 20 Ah; they suspect it skews the fuel gauge."}
 
 # Audit rules: informational flags comparing settings with the manual. Not necessarily wrong.
 audit:
@@ -117,3 +127,8 @@ audit:
   - id: throttle_full_alarm
     source: manual
     text: "A grip reading more than 0.6 V above the full-throttle threshold is treated as a fault and cuts output."
+
+safety:
+  - {source: community, confidence: medium, text: "Neutral (0) may still drive the Apex while some Bluetooth dongles are connected: reported by Utah E-Moto Guide (2026-11-15) and corroborated by MAXAPACITY on the Apex and Engwe Eagle. Cause unverified. Never treat neutral as a throttle lockout while connected: driven wheel off the ground, bike secured, hands off the throttle, people clear."}
+  - {source: community, confidence: medium, text: "MAXAPACITY save procedure: save, power fully off, power on, reconnect, verify the values stuck. Power fully off before removing a dongle."}
+  - {source: community, confidence: medium, text: "MAXAPACITY stop signs: BMS cut-out, sag over ~8 V at WOT, motor temp near 160 C, controller above 85 C, hot connectors, abnormal noise or stutter, Error 09 or changed gear behaviour, settings not sticking after a power cycle."}
