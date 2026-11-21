@@ -113,7 +113,7 @@ FIELDS: list[Field] = [
     _w(0x18, "Motor rated speed", "setting", unit="RPM"),
     _w(0x19, "High gear line current", "setting", 0.25, "A"),
     _bits(0x1A, 0, 2, "Throttle follow mode", "setting"),
-    _bits(0x1A, 2, 2, "ECO mode", "setting"),
+    _bits(0x1A, 2, 2, "Throttle response profile (0 Line, 1 Sport, 2 ECO)", "setting"),
     _bits(0x1A, 4, 2, "Field weakening mode", "setting"),
     _bits(0x1A, 6, 2, "Config bits 6-7 (word 0x1A)", "setting"),
     _bits(0x1A, 8, 5, "Speed pulses per revolution", "setting"),
@@ -389,7 +389,7 @@ KIND_TITLES = {
 
 SAFE_TO_NUDGE = {
     "Throttle acceleration step", "Throttle deceleration step", "Throttle release response",
-    "Acceleration curve update interval", "ECO acceleration coefficient", "ECO mode",
+    "Acceleration curve update interval", "ECO acceleration coefficient", "Throttle response profile (0 Line, 1 Sport, 2 ECO)",
 }
 NEVER_SETTING_WORDS = (
     "Brake", "pin", "Park", "anti-theft", "Anti-theft", "interlock", "direction", "Phase exchange",

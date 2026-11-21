@@ -64,5 +64,28 @@ class SaveGuardTest(unittest.TestCase):
         self.assertTrue(nudge.presave_check(ref, ref, "Throttle acceleration step", 65))  # nudge missing
 
 
+class AllowListTest(unittest.TestCase):
+    def test_every_allowed_field_is_safe(self):
+        from fardriver_ble.address_map import risk
+
+        for name in nudge.NUDGEABLE:
+            self.assertEqual(risk(nudge._field(name)), "safe", name)
+
+    def test_profile_bits_only(self):
+        name = "Throttle response profile (0 Line, 1 Sport, 2 ECO)"
+        word = 0x2B09  # baseline 0x1A: follow=1, profile=2 (ECO), speed pulses 11, gear mode 1
+        self.assertEqual(nudge.new_word(name, 1, word), 0x2B05)  # Sport: only bits 2-3 change
+        with self.assertRaises(ValueError):
+            nudge.new_word(name, 3, word)
+
+    def test_release_response_keeps_high_byte(self):
+        self.assertEqual(nudge.new_word("Throttle release response", 5, 0x0000), 0x0005)
+
+    def test_eco_acc_refused_when_zero(self):
+        with self.assertRaises(PermissionError):
+            nudge.new_word("ECO acceleration coefficient", 2, 0x0100)  # bits 12-15 are 0
+        self.assertEqual(nudge.new_word("ECO acceleration coefficient", 3, 0x2100), 0x3100)
+
+
 if __name__ == "__main__":
     unittest.main()

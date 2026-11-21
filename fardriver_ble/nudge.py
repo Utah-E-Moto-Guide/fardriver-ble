@@ -37,7 +37,14 @@ from .probe import HELLO, safe_write
 # field name -> (min, max) raw value, from the app's own input checks
 NUDGEABLE = {
     "Throttle acceleration step": (2, 224),
+    "Throttle deceleration step": (4, 224),
+    "Throttle release response": (0, 192),
+    "Acceleration curve update interval": (4, 1000),
+    "Throttle response profile (0 Line, 1 Sport, 2 ECO)": (0, 2),
+    "ECO acceleration coefficient": (1, 8),
 }
+# The app only writes ECO acceleration when it is already non-zero (feature present).
+REQUIRES_NONZERO = {"ECO acceleration coefficient"}
 FORBIDDEN_ADDRS = {0xA0, 0x22, 0x23, 0x24}  # command register and save stamp
 
 
@@ -52,6 +59,8 @@ def new_word(name: str, raw: int, current_word: int) -> int:
     f = _field(name)
     if risk(f) != "safe" or f.addr in FORBIDDEN_ADDRS:
         raise PermissionError(f"{name!r} is not a safe field")
+    if name in REQUIRES_NONZERO and f.raw(current_word) == 0:
+        raise PermissionError(f"{name!r} is 0 on this controller; the app does not write it then")
     lo, hi = NUDGEABLE[name]
     if not lo <= raw <= hi:
         raise ValueError(f"{raw} outside the app's range {lo}..{hi}")

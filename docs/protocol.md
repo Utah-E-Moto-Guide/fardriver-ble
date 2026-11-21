@@ -252,3 +252,14 @@ depends only on settings content.
 throttle accel 64 -> 65 (RAM only), then `restore_from` the before snapshot -> 64. Both read back twice,
 one setting change each, save count 134 throughout. A non-listed field (low-voltage cutoff) is refused.
 `restore_from` is the per-setting restore path: put one field back to a backup's value.
+
+## Allow list expanded (2026-11-21)
+
+Added, with the app's own raw limits: throttle deceleration step (0x2B, 4..224), throttle release response
+(0x2C low byte, 0..192), acceleration curve update interval (0x0A, raw 4..1000; shown as (raw+1)*2 ms),
+throttle response profile (0x1A bits 2-3: 0 Line, 1 Sport, 2 ECO; renamed from "ECO mode"; the owner's
+Sep -> Nov change was Sport -> ECO), ECO acceleration coefficient (0xBE bits 12-15, 1..8; refused when 0,
+as the app does). Bit fields rebuild the word from a fresh read, changing only their bits.
+Live RAM-only test (`tools/test_allowlist_live.py`): each stepped once, read back twice, restored from the
+start snapshot via restore_from. All passed; bit-field steps changed only their own field; end vs start:
+no setting changes, save count 134 throughout.
