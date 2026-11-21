@@ -245,3 +245,10 @@ depends only on settings content.
   the stamp and save count). No standard CRC/sum over the visible settings matches; it's firmware-internal and
   the firmware recomputes it on every Save, so we never need to compute it. Now kind "identity" (not unknown).
 - Net effect of the whole experiment vs `full-baseline`: settings identical, save count +2, new save stamp.
+
+## MCP set tool (2026-11-21)
+
+`fardriver_settable` and `fardriver_set` (via nudge.py). Tested over stdio exactly as Claude Code calls it:
+throttle accel 64 -> 65 (RAM only), then `restore_from` the before snapshot -> 64. Both read back twice,
+one setting change each, save count 134 throughout. A non-listed field (low-voltage cutoff) is refused.
+`restore_from` is the per-setting restore path: put one field back to a backup's value.
