@@ -22,6 +22,16 @@ class ProbeAllowlistTest(unittest.TestCase):
             asyncio.run(probe.safe_write(client, bytes.fromhex("aac6abab3414"), lambda _: None))
         self.assertEqual(client.writes, [])
 
+    def test_pin_and_binding_commands_are_refused(self):
+        # Password confirm/change (19, 10..13) and phone binding (19, 22..35) command frames.
+        from fardriver_ble.crc import command_frame
+
+        client = FakeClient()
+        for sub in [10, 11, 12, 13, *range(22, 27), *range(32, 36)]:
+            with self.assertRaises(PermissionError):
+                asyncio.run(probe.safe_write(client, command_frame(19, sub, 0x33, 0x34), lambda _: None))
+        self.assertEqual(client.writes, [])
+
     def test_hello_goes_through(self):
         client = FakeClient()
         asyncio.run(probe.safe_write(client, probe.HELLO, lambda _: None))
