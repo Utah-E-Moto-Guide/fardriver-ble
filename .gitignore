@@ -17,3 +17,5 @@ __pycache__/
 *.log
 *.btsnoop
 btsnoop_hci*
+*.egg-info/
+build/

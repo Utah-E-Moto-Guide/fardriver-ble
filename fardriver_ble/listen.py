@@ -29,7 +29,8 @@ SETTINGS_IDS = range(56, 88)
 class Framer:
     """Reassembles 16-byte 0xAA frames from BLE notifications, as the app does."""
 
-    def __init__(self):
+    def __init__(self, on_frame=None):
+        self.on_frame = on_frame  # called with each CRC-valid new-format frame
         self.buf = bytearray()
         self.ids = Counter()
         self.bad_crc = 0
@@ -58,6 +59,8 @@ class Framer:
         self.ids[fid] += 1
         if fid in SETTINGS_IDS:
             self.settings[fid] = f[2:14].hex()
+        if self.on_frame:
+            self.on_frame(f)
 
 
 async def listen(mac: str, seconds: float, outdir: Path) -> dict:

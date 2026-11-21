@@ -103,3 +103,12 @@ Against a GDriver export from 2026-09-26 (owner's Dropbox, not committed):
   as controller-maintained (counters, timestamps, learned calibration, status): back them up, but report them
   separately from setting changes in diffs. Names for them are still unknown.
 - bytes 312..695 (the 56..87 image) are almost all zero in that file (words 17 = 61440, 19 = 64).
+
+## Snapshot tool (2026-11-21)
+
+- Capture is complete when all 31 parameter blocks read twice in a row with equal values. First live baseline
+  `snapshots/2026-11-21T202712Z_baseline`: 4 hellos, 62 block reads, 0 unstable, 0 bad CRC, about 4 s after a
+  ~16 s connect (signal about -78 dBm at the bike). Serial `JSWX2C2605232776AC28` (ASCII at 0xA1..0xAA).
+- Against the September GDriver file it shows exactly the owner's three changes.
+- Against this afternoon's run 3, words 0xDD, 0xE0, 0xF4, 0xF9 and 0x82 moved with no edits. All but 0x82 are in
+  blocks the app's backup omits, so diffs now treat every word outside the `.heb` as runtime data.
