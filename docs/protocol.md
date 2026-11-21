@@ -89,3 +89,14 @@ Deliberately not pursued: the app's forced owner-unbind flow and a hardcoded-key
 `{address: u16}` for the 31 non-telemetry blocks of the 0..54 cycle (addresses 0x00..0xFF with gaps
 0x36..0x5C, 0x6F..0x7B, 0xE2..0xF3). Volatile addresses listed above are recorded but excluded from diffs.
 Still to do: compare against a `.heb` exported by the phone app to prove nothing is missing.
+
+## `.heb` layout (verified 2026-11-21)
+
+Against a GDriver export from 2026-09-26 (owner's Dropbox, not committed):
+- bytes 0..311 = 26 stream blocks (156 words) packed in address order: every non-telemetry block from 0x00
+  to 0xD0 except 0x5D. See `HEB_BLOCKS` in `fardriver_ble/decode.py`.
+- Today's stream vs that file: 142/156 words identical; 14 differ, same in runs 2 and 3. Owner says 4-5 settings
+  changed since September. Likely: 0x1C battery capacity 20 -> 35, 0x2F throttle acceleration 175 -> 64,
+  0x2B throttle deceleration 128 -> 64 (from neighbours in the GDriver XLSX). Others unnamed:
+  0x05 (96 -> 132), 0x1A, 0x22..0x24 (look like packed bytes / timestamp), 0x6D, 0x7D, 0x82, 0xB9, 0xD1, 0xD3.
+- bytes 312..695 (the 56..87 image) are almost all zero in that file (words 17 = 61440, 19 = 64).

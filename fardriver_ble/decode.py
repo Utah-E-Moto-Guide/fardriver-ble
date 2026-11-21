@@ -49,3 +49,20 @@ def parse_raw_log(path) -> list[bytes]:
         else:
             i += 1
     return frames
+
+
+# The app's .heb export: first 312 bytes are these 26 blocks (156 words), packed in
+# address order. Verified 2026-11-21 against a GDriver export: 142/156 words equal,
+# the rest explained by setting changes since. 0x5D, 0xD6, 0xDC, 0xF4, 0xFA are not in
+# the file; they hold the counter-like words.
+HEB_BLOCKS = tuple(sorted(a for a in set(FLASH_READ_ADDR) - TELEMETRY_ADDRS if a <= 0xD0 and a != 0x5D))
+HEB_ADDRS = tuple(a + k for a in HEB_BLOCKS for k in range(6))
+assert len(HEB_ADDRS) == 156
+
+
+def heb_main_words(heb: bytes) -> dict[int, int]:
+    """{address: u16} for the first section of a 696-byte .heb file."""
+    import struct
+
+    assert len(heb) == 696, len(heb)
+    return dict(zip(HEB_ADDRS, struct.unpack("<156H", heb[:312]), strict=True))
