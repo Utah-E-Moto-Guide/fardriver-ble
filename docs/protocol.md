@@ -214,3 +214,12 @@ wiring, direction or protection. Discovery tests should only nudge a "safe" fiel
   **system command 04 = save to flash**. That's why 0xA0 reads `88 04`, and why the save count (0x05) rises
   once per Save press (96 -> 132 = 36 presses).
 - Working assumption, untested: a value write without Save lives in RAM and reverts on power cycle.
+
+## First setting write: throttle acceleration 64 -> 65, no Save (2026-11-21)
+
+`fardriver_ble/nudge.py` (only NUDGEABLE safe fields, one step, app range, never 0xA0 / save stamp).
+Frame `AA C6 2F 2F 41 00 89 A0`. Snapshots `accel-65-before` / `accel-65-after`:
+- Read back as 65 twice from the live stream. Diff: **one setting change** (0x2F 64 -> 65), save count 132 -> 132,
+  save stamp unchanged, 0xB9 unchanged, only 2 live fields moved.
+- So a single-setting write takes effect immediately without Save, and doesn't touch 0xB9.
+- Next: power cycle to see whether the unsaved value reverts to 64.
