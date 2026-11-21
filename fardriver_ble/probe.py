@@ -3,6 +3,7 @@
 Allowed writes, and nothing else:
 - the hello: 8-byte command frame (19, 7, 1, 95) the app sends on connect and as a keep-alive
 - entering the factory-default PIN 3414 (a check, never a change), as the app does on connect
+- the app's request for the second settings section: command frame (19, 7, 10, 56)
 No settings, flash, PIN-change, binding or motor command can be sent.
 
 Usage: python -m fardriver_ble.probe <mac> <seconds> <outdir> [--repeat SECONDS]
@@ -35,7 +36,11 @@ def _addr_write(addr: int, payload: bytes) -> bytes:
 DEFAULT_PIN_ENTRY = _addr_write(0xAB, bytes([0x34, 0x14]))
 assert DEFAULT_PIN_ENTRY.hex() == "aac6abab3414c7e6"
 
-ALLOWED_WRITES = {HELLO, DEFAULT_PIN_ENTRY}
+# What the app sends when it is missing frames 56..87 (the .heb second section): the hello
+# command with different arguments. A read request; nothing is stored.
+REQUEST_SECOND_SECTION = command_frame(19, 7, 10, 56)
+
+ALLOWED_WRITES = {HELLO, DEFAULT_PIN_ENTRY, REQUEST_SECOND_SECTION}
 
 
 async def safe_write(client: BleakClient, data: bytes, log):
@@ -45,7 +50,9 @@ async def safe_write(client: BleakClient, data: bytes, log):
     await client.write_gatt_char(CHAR, data, response=False)
 
 
-async def probe(mac: str, seconds: float, outdir: Path, repeat: float | None, pin: bool = False) -> dict:
+async def probe(
+    mac: str, seconds: float, outdir: Path, repeat: float | None, pin: bool = False, request56: bool = False
+) -> dict:
     framer = Framer()
     outdir.mkdir(parents=True, exist_ok=True)
     t0 = time.monotonic()
@@ -81,6 +88,9 @@ async def probe(mac: str, seconds: float, outdir: Path, repeat: float | None, pi
                     if pin and n % 2 == 0:  # like the app: PIN entry every other keep-alive
                         await safe_write(client, DEFAULT_PIN_ENTRY, log)
                         await asyncio.sleep(0.01)
+                    if request56 and n % 5 == 1:  # ask for frames 56..87 every 5 s
+                        await safe_write(client, REQUEST_SECOND_SECTION, log)
+                        await asyncio.sleep(0.01)
                     await safe_write(client, HELLO, log)
             await client.stop_notify(CHAR)
         finally:
@@ -108,5 +118,6 @@ if __name__ == "__main__":
     ap.add_argument("outdir", type=Path)
     ap.add_argument("--repeat", type=float, default=None, help="resend the hello every N seconds")
     ap.add_argument("--pin", action="store_true", help="also enter the default PIN every other keep-alive")
+    ap.add_argument("--request56", action="store_true", help="also request frames 56..87 every 5 s")
     a = ap.parse_args()
-    print(json.dumps(asyncio.run(probe(a.mac, a.seconds, a.outdir, a.repeat, a.pin)), indent=2))
+    print(json.dumps(asyncio.run(probe(a.mac, a.seconds, a.outdir, a.repeat, a.pin, a.request56)), indent=2))

@@ -57,5 +57,21 @@ class SnapshotRoundTripTest(unittest.TestCase):
         self.assertTrue(d["same_controller"])
 
 
+class SecondSectionTest(unittest.TestCase):
+    def test_run5_replay_reads_second_section(self):
+        col = replay(REPO / "captures/2026-11-21-run5-request56/raw_notifications.txt")
+        self.assertTrue(col.done())
+        self.assertTrue(col.second_done())
+        second = col.second_words()
+        self.assertEqual(len(second), 192)
+        # Same as the owner's September settings export: only words 17 and 19 non-zero.
+        self.assertEqual({i: v for i, v in enumerate(second) if v}, {17: 61440, 19: 64})
+        words = {a + i: v for a, w in col.confirmed.items() for i, v in enumerate(w)}
+        s = snap.Snapshot("2026-11-21T21:10:00+00:00", "replay", words, second=second)
+        heb = s.heb()
+        self.assertEqual(len(heb), 696)
+        self.assertEqual(snap.Snapshot.from_json(s.to_json()).heb(), heb)
+
+
 if __name__ == "__main__":
     unittest.main()

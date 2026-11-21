@@ -13,10 +13,10 @@ class FakeClient:
 
 
 class ProbeAllowlistTest(unittest.TestCase):
-    def test_only_hello_and_default_pin_entry_are_allowed(self):
+    def test_allowlist_is_exactly_three_frames(self):
         self.assertEqual(
             probe.ALLOWED_WRITES,
-            {bytes.fromhex("aa13ec07015f10ef"), bytes.fromhex("aac6abab3414c7e6")},
+            {bytes.fromhex("aa13ec07015f10ef"), bytes.fromhex("aac6abab3414c7e6"), probe.command_frame(19, 7, 10, 56)},
         )
 
     def test_other_pins_are_refused(self):

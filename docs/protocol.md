@@ -167,3 +167,14 @@ Owner OK'd entering (never changing) the default PIN. Allowlisted exactly `AA C6
   (unverified). The Sep settings export had 0 there.
 - What the app sends when frames 56..87 are missing: command `(19, 7, 10, 56)`, a variant of the hello.
   Not sent yet.
+
+## Second section request (2026-11-21)
+
+Owner OK'd it. Allowlisted the app's `(19, 7, 10, 56)` = `AA 13 EC 07 0A 38 F2 0D`.
+- `before-request56` snapshot; run 5 (`captures/2026-11-21-run5-request56/`): 31 hellos + 6 requests over 30 s,
+  975 frames, 0 bad CRC, **all 32 frames 56..87 received**, each read consistently.
+- `after-request56`: no setting changes, save count 132 -> 132, timestamp unchanged.
+- The 192-word second section is identical to the September settings export (words 17 = 61440, 19 = 64, rest 0).
+  The app never interprets it; it only carries it in exports.
+- Snapshots now request it automatically and save a full `controller.heb`. First one:
+  `snapshots/2026-11-21T211233Z_full-baseline` (19 bytes differ from Sep, all explained).
