@@ -79,7 +79,7 @@ class RiskTest(unittest.TestCase):
     def test_safe_set_is_small_and_known(self):
         self.assertEqual(self.names("safe"), {
             "Throttle acceleration step", "Throttle deceleration step", "Throttle release response",
-            "Acceleration curve update interval", "ECO acceleration coefficient", "ECO mode",
+            "Acceleration curve update interval", "ECO acceleration coefficient", "Throttle response profile (0 Line, 1 Sport, 2 ECO)",
         })
 
 
