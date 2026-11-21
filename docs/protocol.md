@@ -137,7 +137,7 @@ and the 120/70-12 tire.
 Corrections this made to earlier guesses:
 - 0x05 is the **settings save count** (96 in Sep, the "96" in GDriver's file name; 132 now).
 - 0x1A packs throttle follow, **ECO mode**, field weakening, speed pulses and gear mode. Its Sep -> Nov change
-  is ECO mode 1 -> 2: a fourth setting change, not controller data.
+  is ECO mode 1 -> 2: a fourth setting change, not controller data. **Owner confirmed it was theirs (2026-11-21).**
 - 0x6D/0x81 odometer, 0x7D/0x7E work time, 0x82 live throttle voltage.
 - 0xD1 and 0xD3 mix a setting byte with a live byte (average power, average speed).
 - Regen curve: point i at i*500 RPM from 0, stored negative. Tire: 0xD2 lo aspect, 0xD2 hi rim, 0xD3 hi width;
@@ -146,3 +146,11 @@ Corrections this made to earlier guesses:
 Still unidentified in the app's backup: high bytes of 0x14, 0x2C, 0x65 (32), 0x9F; 0x67 (720), 0x68 (20257),
 0xA0 (1160), 0xAB, 0xAC..0xB3 (0xAD = 176, rest 0), 0xB9, plus a few config bits. The app never reads block
 0xAC or 0xB9.
+
+## What "login" means here (from the app, 2026-11-21)
+
+Fardriver controllers have an optional 4-digit PIN; the factory default is 3414. When the app connects to a
+controller it isn't bound to, it sends that PIN every other keep-alive: an address write of `34 14` (the digits
+packed two per byte) to 0xAB, then the hello. A PIN the user types goes to the same address. It is a PIN check,
+not an account. We have never sent it; everything so far used only the hello. It probably gates frames 56..87
+(the `.heb` second section), which was nearly empty (2 non-zero words) in the September file.
