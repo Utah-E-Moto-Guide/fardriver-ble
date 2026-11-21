@@ -13,7 +13,12 @@ Kinds:
   stamp        a date/time the controller or app wrote
   identity     serial, version and model codes
   live         telemetry and runtime state
+  command      the system-command register (0xA0): writing it runs actions such as factory reset
+  binding      PIN / owner phone-number store
   unknown      read but not yet identified
+
+Sources: the official app's display code, plus field notes in the MIT-licensed
+jackhumbert/fardriver-controllers for blocks the app never displays.
 """
 
 from dataclasses import dataclass
@@ -78,11 +83,13 @@ FIELDS: list[Field] = [
     _hi(0x08, "Throttle full voltage", "setting", 1 / 20, "V"),
     _w(0x09, "Feature flags (throttle insert etc.)", "setting"),
     Field(0x0A, "Acceleration curve update interval", "setting", 0, 16, 2, "ms", offset=2),
-    _bits(0x0B, 0, 4, "Low config bits (word 0x0B)", "setting"),
+    _bits(0x0B, 0, 4, "Brake input mode (4 = brake disabled)", "setting"),
     _bits(0x0B, 4, 3, "Motor temperature sensor type", "setting"),
-    _bits(0x0B, 7, 1, "Config bit 7 (word 0x0B)", "setting"),
+    _bits(0x0B, 7, 1, "Phase exchange", "setting"),
     _bits(0x0B, 8, 3, "Slow-down strength", "setting"),
-    _bits(0x0B, 11, 4, "Config bits 11-14 (word 0x0B)", "setting"),
+    _bits(0x0B, 11, 1, "Race response", "setting"),
+    _bits(0x0B, 12, 1, "Current anti-theft (lock motor)", "setting"),
+    _bits(0x0B, 13, 2, "Park mode", "setting"),
     _bits(0x0B, 15, 1, "Motor direction reversed", "setting"),
     # 0x0C block
     _w(0x0C, "Learned phase offset", "calibration", 0.1),
@@ -152,13 +159,13 @@ FIELDS: list[Field] = [
     # 0x5D block: fault history (not in the app's backup)
     *[_lo(0x5D + i // 2, f"Fault counter {i}", "counter") if i % 2 == 0 else _hi(0x5D + i // 2, f"Fault counter {i}", "counter") for i in range(12)],
     # 0x63 block
-    _w(0x63, "Line current limit (EN)", "setting"),
-    _w(0x64, "Phase current limit (EN)", "setting"),
-    _lo(0x65, "Motor diameter code", "setting"),
-    _hi(0x65, "Word 0x65 high byte", "unknown"),
+    _w(0x63, "Second line current limit", "setting"),
+    _w(0x64, "Second phase current limit", "setting"),
+    _lo(0x65, "Application / motor type code", "setting"),
+    _hi(0x65, "Word 0x65 high byte (maybe a current multiplier)", "unknown"),
     _w(0x66, "Temperature sense coefficient", "calibration"),
-    _w(0x67, "Word 0x67", "unknown"),
-    _w(0x68, "Word 0x68", "unknown"),
+    _w(0x67, "Production maximum voltage", "identity", 0.1, "V"),
+    _w(0x68, "Production maximum current (ISMax)", "identity"),
     # 0x69 block: input pins (nibbles)
     _bits(0x69, 12, 4, "Boost input pin", "setting"),
     _bits(0x69, 8, 4, "Cruise input pin", "setting"),
@@ -218,10 +225,15 @@ FIELDS: list[Field] = [
     _w(0x9E, "Turtle-speed current coefficient", "setting"),
     _lo(0x9F, "Voltage selection ratio", "setting"),
     _hi(0x9F, "Word 0x9F high byte", "unknown"),
-    _w(0xA0, "Word 0xA0", "unknown"),
+    _lo(0xA0, "Command register marker (0x88)", "command"),
+    _hi(0xA0, "Command register: last system command", "command"),
     *[_w(a, f"Serial number characters {2 * (a - 0xA1)}-{2 * (a - 0xA1) + 1}", "identity") for a in range(0xA1, 0xAB)],
     _w(0xAB, "PIN check register (last PIN entered; temporary)", "live"),
-    *[_w(a, f"Word 0x{a:02X}", "unknown") for a in range(0xAC, 0xB4)],
+    # 0xAC..0xB1: PIN / owner phone-number binding store. Strings are stored as
+    # chr(0xB0 + length) + text, so 0xB0 (176) means "empty". Privacy-sensitive.
+    *[_w(a, f"PIN / phone binding store word {a - 0xAC}", "binding") for a in range(0xAC, 0xB2)],
+    _w(0xB2, "Word 0xB2", "unknown"),
+    _w(0xB3, "Word 0xB3", "unknown"),
     # 0xB2 block: one-wire display protocol
     *[(_lo if i % 2 == 0 else _hi)(0xB4 + i // 2, f"One-wire sequence byte {i}", "setting") for i in range(8)],
     _w(0xB8, "One-wire field positions", "setting"),
@@ -233,7 +245,8 @@ FIELDS: list[Field] = [
     _lo(0xBD, "Low-SOC limit stage 1", "setting"),
     _hi(0xBD, "Low-SOC limit stage 2", "setting"),
     # 0xBE block
-    _bits(0xBE, 0, 12, "Config bits (word 0xBE)", "setting"),
+    _bits(0xBE, 0, 8, "Low-battery current limiting method", "setting"),
+    _bits(0xBE, 8, 4, "Config bits 8-11 (word 0xBE)", "setting"),
     _bits(0xBE, 12, 4, "ECO acceleration coefficient", "setting"),
     _w(0xBF, "Boost duration", "setting", 1 / 500, "s"),
     _w(0xC0, "Boost release delay", "setting", 1 / 500, "s"),
@@ -275,24 +288,29 @@ FIELDS: list[Field] = [
     _w(0xD5, "One-wire configuration", "setting"),
     # 0xD6 block: runtime state
     _w(0xD6, "Word 0xD6", "live"),
-    _w(0xD7, "Global state 1", "live"),
+    _w(0xD7, "Global state 1 (hall error, auto-learn, motor running flags)", "live"),
     _w(0xD8, "Global state 2", "live"),
     _w(0xD9, "Global state 3", "live"),
     _w(0xDA, "Global state 4", "live"),
     _w(0xDB, "Motor temperature", "live", signed=True),
     # 0xDC block: more fault counters (the app also reads bit 7 of 0xE1 as a channel flag)
-    _w(0xDC, "Fault/status word 12 (moves on its own)", "live"),
-    *[_w(0xDC + i, f"Fault counter {12 + i}", "counter") for i in range(1, 6)],
+    # 0xDC..0xE1: the app joins these into three 32-bit counters it calls Discover 20/19/18.
+    _w(0xDC, "Discover counter 20 (high word)", "live"),
+    _w(0xDD, "Discover counter 20 (low word)", "counter"),
+    _w(0xDE, "Discover counter 19 (high word)", "counter"),
+    _w(0xDF, "Discover counter 19 (low word)", "counter"),
+    _w(0xE0, "Discover counter 18 (high word)", "counter"),
+    _w(0xE1, "Discover counter 18 (low word)", "counter"),
     # 0xF4 / 0xFA blocks: runtime
-    _w(0xF4, "Word 0xF4", "live"),
-    _lo(0xF5, "Word 0xF5 low byte", "live"),
+    _w(0xF4, "Motor temperature", "live", unit="C", signed=True),
+    _lo(0xF5, "Word 0xF5 low byte (scaled time?)", "live"),
     _hi(0xF5, "Battery state of charge", "live", unit="%"),
     _lo(0xF6, "Word 0xF6 low byte", "live"),
-    _hi(0xF6, "Clock: year", "live", offset=2000),
-    _lo(0xF7, "Clock: month", "live"),
-    _hi(0xF7, "Clock: day", "live"),
-    _w(0xF8, "Runtime counter A", "live"),
-    _w(0xF9, "Runtime counter B", "live"),
+    _hi(0xF6, "Last modified: year", "live", offset=2000),
+    _lo(0xF7, "Last modified: month", "live"),
+    _hi(0xF7, "Last modified: day", "live"),
+    _w(0xF8, "Firmware loop time, total", "live", 0.125, "us"),
+    _w(0xF9, "Firmware loop time, single", "live", 0.125, "us"),
     _w(0xFA, "Phase A current zero offset", "live"),
     _w(0xFB, "Phase C current zero offset", "live"),
     _w(0xFC, "Motor stop state", "live"),
@@ -325,7 +343,10 @@ def decode(words: dict[int, int]) -> list[dict]:
     out = []
     for a in sorted(words):
         for f in BY_ADDR.get(a, []):
-            out.append({"addr": f"0x{a:02X}", "field": f.name, "kind": f.kind, "value": f.value(words[a]), "unit": f.unit})
+            out.append({
+                "addr": f"0x{a:02X}", "field": f.name, "kind": f.kind,
+                "value": f.value(words[a]), "unit": f.unit, "risk": risk(f),
+            })
     return out
 
 
@@ -348,13 +369,47 @@ def field_changes(old: dict[int, int], new: dict[int, int]) -> list[dict]:
 # Words that can legitimately differ between two back-to-back reads.
 UNSTABLE_ADDRS = frozenset(a for a, fs in BY_ADDR.items() if any(f.kind in ("live", "counter") for f in fs))
 
-KIND_ORDER = ("setting", "unknown", "calibration", "identity", "stamp", "counter", "live")
+KIND_ORDER = ("setting", "unknown", "command", "binding", "calibration", "identity", "stamp", "counter", "live")
 KIND_TITLES = {
     "setting": "Setting changes",
     "unknown": "Unidentified fields that changed",
+    "command": "Command register (0xA0)",
+    "binding": "PIN / phone binding store",
     "calibration": "Calibration (changes after a self-learn)",
     "identity": "Identity and version",
     "stamp": "Save timestamp",
     "counter": "Counters",
     "live": "Live / runtime",
 }
+
+
+# --- Write risk -------------------------------------------------------------
+# What is safe to change while experimenting. Nothing in this tool writes settings;
+# this is for choosing what to nudge in the phone app, and for any future restore.
+#   never    must not be written: commands, binding, identity, calibration, unknowns,
+#            and settings that affect braking, interlocks, wiring, direction or protection
+#   caution  changes how the bike rides or performs; fine to tune, not for discovery
+#   safe     comfort settings; a small nudge is a harmless discovery test
+
+SAFE_TO_NUDGE = {
+    "Throttle acceleration step", "Throttle deceleration step", "Throttle release response",
+    "Acceleration curve update interval", "ECO acceleration coefficient", "ECO mode",
+}
+NEVER_SETTING_WORDS = (
+    "Brake", "pin", "Park", "anti-theft", "Anti-theft", "interlock", "direction", "Phase exchange",
+    "cutoff", "restore", "temperature", "Temperature", "Low-voltage", "Over-voltage", "pole pairs",
+    "sensor", "CAN", "RS485", "One-wire", "Battery type", "Relay", "Feature", "Config bits",
+    "Second line", "Second phase", "Application", "loop K", "Speed loop", "Current loop", "Speed pulse",
+    "Rated battery voltage", "Stall", "Start current", "Throttle insert", "Throttle closed", "Throttle full",
+    "Auxiliary", "No-load", "Voltage selection", "Pulse output",
+)
+
+
+def risk(f: Field) -> str:
+    if f.kind != "setting":
+        return "never"
+    if f.name in SAFE_TO_NUDGE:
+        return "safe"
+    if any(w in f.name for w in NEVER_SETTING_WORDS):
+        return "never"
+    return "caution"
