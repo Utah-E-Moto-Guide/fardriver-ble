@@ -102,21 +102,22 @@ def fardriver_show(name: str = "", kind: str = "setting") -> str:
 @mcp.tool()
 @refusals_as_text
 def fardriver_settable() -> str:
-    """Settings fardriver_set may change, with the app's raw limits. Everything else is refused."""
-    from .nudge import NUDGEABLE, _field
+    """Settings that can be changed: tier (comfort/caution/high), limits and max step in display units.
+    Everything else is refused. High-tier fields need acknowledge_risk=True. Sanity rules always apply."""
+    from . import policy
 
-    rows = [{"field": n, "raw_min": lo, "raw_max": hi, "unit": _field(n).unit} for n, (lo, hi) in NUDGEABLE.items()]
-    return json.dumps(rows, indent=1)
+    return json.dumps({"fields": policy.describe(), "rules": policy.__doc__.split("Hard rules")[1].strip()}, indent=1)
 
 
 @mcp.tool()
 @refusals_as_text
 async def fardriver_set(
-    mac: str, field: str, value: int | None = None, restore_from: str = "", save: bool = False
+    mac: str, field: str, value: float | None = None, restore_from: str = "", save: bool = False,
+    acknowledge_risk: bool = False,
 ) -> str:
     """Change ONE allowed setting on the controller (see fardriver_settable), the way the app does.
 
-    - value: new raw value, one step from the current value. Or omit it and pass restore_from
+    - value: new value in DISPLAY units (A, RPM, %, s, ms), within the field's max step. Or omit it and pass restore_from
       (a snapshot name or .heb path) to put back that backup's value for this one field.
     - save=False (default): the change lives in RAM only and a power cycle undoes it.
     - save=True: after a pre-save check (only this field differs from what's stored), sends the app's
@@ -125,7 +126,8 @@ async def fardriver_set(
     """
     from .nudge import nudge
 
-    r = await nudge(mac, field, value, label="mcp-set", restore_from=restore_from or None, save=save)
+    r = await nudge(mac, field, value, label="mcp-set", restore_from=restore_from or None, save=save,
+                    acknowledge_risk=acknowledge_risk)
     diff = r.pop("diff", "")
     return json.dumps(r, indent=1) + ("\n\n" + diff if diff else "")
 
@@ -170,15 +172,19 @@ async def tune_start(mac: str, goal: str) -> str:
 
 @mcp.tool()
 @refusals_as_text
-async def tune_try(mac: str, field: str, value: int, save: bool = False) -> str:
-    """Try ONE change (raw value, within the field's max step). RAM-only unless save=True.
+async def tune_try(mac: str, field: str, value: float, save: bool = False, acknowledge_risk: bool = False) -> str:
+    """Try ONE change (display units, within the field's max step). RAM-only unless save=True.
+
+    High-tier fields (currents, power curve) need acknowledge_risk=True, which you may only pass
+    after explaining the specific risk to the owner and hearing them accept it. The controller's
+    fault bits are watched after the write; a new fault puts the old value back automatically.
 
     RAM-only changes vanish when the key goes off, so tell the owner to keep the bike on until the ride
     is done, or ask whether to save the trial (reversible by tune_revert, which saves the old value back).
     """
     from . import tune
 
-    r = await tune.try_change(mac, field, value, save=save)
+    r = await tune.try_change(mac, field, value, save=save, acknowledge_risk=acknowledge_risk)
     diff = r.pop("diff", "") if isinstance(r, dict) else ""
     return json.dumps(r, indent=1) + ("\n\n" + diff if diff else "")
 

@@ -43,11 +43,6 @@ def knowledge_for(field: str) -> dict | None:
     return None
 
 
-def max_step(field: str) -> int:
-    e = knowledge_for(field)
-    return int(e.get("max_step", 1)) if e and "max_step" in e else 1
-
-
 # --- audit -------------------------------------------------------------------
 
 def _val(words, name):
@@ -133,7 +128,7 @@ async def start(mac: str, goal: str) -> dict:
     return s
 
 
-async def try_change(mac: str, field: str, value: int, save: bool = False) -> dict:
+async def try_change(mac: str, field: str, value: float, save: bool = False, acknowledge_risk: bool = False) -> dict:
     s = current_session()
     if not s:
         raise RuntimeError("no open session; start one with a goal")
@@ -141,15 +136,19 @@ async def try_change(mac: str, field: str, value: int, save: bool = False) -> di
         raise RuntimeError("a change is still open; give feedback and keep or revert it first")
     if field not in NUDGEABLE:
         raise PermissionError(f"{field!r} is not tunable; allowed: {sorted(NUDGEABLE)}")
-    r = await nudge(mac, field, value, label=f"tune-{s['id']}-try", save=save, max_step=max_step(field))
+    r = await nudge(mac, field, value, label=f"tune-{s['id']}-try", save=save, acknowledge_risk=acknowledge_risk)
     if r.get("unchanged"):
         return r
-    trial = {"n": len(s["trials"]) + 1, "field": field, "from": r["from"], "to": r["to"],
-             "display_from": r["display_from"], "display_to": r["display_to"], "unit": r["unit"],
+    trial = {"n": len(s["trials"]) + 1, "field": field, "tier": r.get("tier"), "from": r["from"], "to": r["to"],
+             "display_from": r["from"], "display_to": r["to"], "unit": r["unit"],
+             "faults": r.get("new_faults"), "auto_reverted": r.get("auto_reverted"),
              "saved": bool(save and r.get("save", {}).get("saved")), "status": "applied", "at": _now(),
              "snapshots": [r["before"], r["after"]] + ([r["saved_snapshot"]] if r.get("saved_snapshot") else []),
              "notes": []}
-    if save and not trial["saved"]:
+    if r.get("auto_reverted"):
+        trial["status"] = "failed"
+        trial["notes"].append({"at": _now(), "text": f"controller faulted ({r['auto_reverted']}); value written back automatically"})
+    elif save and not trial["saved"]:
         trial["status"] = "failed"
         trial["notes"].append({"at": _now(), "text": f"save refused: {r.get('save')}"})
     s["trials"].append(trial)
@@ -167,7 +166,7 @@ async def feedback(mac: str, notes: str) -> dict:
     now = await snap.capture(mac)
     ndir = snap.save(now, label=f"tune-{s['id']}-feedback")
     f = _field(t["field"])
-    active = f.raw(now.words[f.addr]) == t["to"]
+    active = f.value(now.words[f.addr]) == t["to"]
     t["notes"].append({"at": _now(), "text": notes, "value_active_now": active, "snapshot": ndir.name})
     t["status"] = "rode"
     warning = None
@@ -193,8 +192,9 @@ async def keep(mac: str) -> dict:
         return {"trial": t, "note": "already saved when tried"}
     f = _field(t["field"])
     cur = await snap.capture(mac)
-    if f.raw(cur.words[f.addr]) != t["to"]:  # key went off: re-apply first
-        await nudge(mac, t["field"], t["to"], label=f"tune-{s['id']}-reapply", max_step=max_step(t["field"]))
+    if f.value(cur.words[f.addr]) != t["to"]:  # key went off: re-apply first
+        await nudge(mac, t["field"], t["to"], label=f"tune-{s['id']}-reapply", restore_from=t["snapshots"][1],
+                    acknowledge_risk=True)
         cur = await snap.capture(mac)
     problems = presave_check(snap.load(s["saved_ref"]), cur, t["field"], t["display_to"])
     if problems:
@@ -217,7 +217,7 @@ async def revert(mac: str) -> dict:
         raise RuntimeError("no open change to revert")
     ref = t["snapshots"][0]  # state just before this trial
     r = await nudge(mac, t["field"], None, label=f"tune-{s['id']}-revert", restore_from=ref, save=t["saved"],
-                    max_step=max_step(t["field"]))
+                    acknowledge_risk=True)
     t.update(status="reverted", reverted_at=_now())
     if r.get("saved_snapshot"):
         s["saved_ref"] = r["saved_snapshot"]

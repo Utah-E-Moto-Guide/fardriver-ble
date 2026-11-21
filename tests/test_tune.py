@@ -17,14 +17,12 @@ class KnowledgeTest(unittest.TestCase):
         for e in self.k["settable"] + self.k["context"]:
             self.assertIn(e["field"], NAMES)
 
-    def test_settable_matches_allow_list(self):
-        self.assertEqual({e["field"] for e in self.k["settable"]}, set(NUDGEABLE))
-        for e in self.k["settable"]:
-            self.assertEqual(tuple(e["raw_range"]), NUDGEABLE[e["field"]], e["field"])
+    def test_settable_notes_are_for_changeable_fields(self):
+        self.assertLessEqual({e["field"] for e in self.k["settable"]}, set(NUDGEABLE))
 
     def test_every_note_is_sourced(self):
         notes = [(e["field"], n) for e in self.k["settable"] + self.k["context"] for n in e["notes"]]
-        notes += [("safety", n) for n in self.k.get("safety", [])]
+        notes += [("safety", n) for n in self.k.get("safety", [])] + [("faults", n) for n in self.k.get("faults", [])]
         for where, n in notes:
             self.assertIn(n["source"], SOURCES, where)
             self.assertIn(n["confidence"], {"high", "medium", "low"}, where)
