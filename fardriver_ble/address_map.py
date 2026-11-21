@@ -220,7 +220,7 @@ FIELDS: list[Field] = [
     _hi(0x9F, "Word 0x9F high byte", "unknown"),
     _w(0xA0, "Word 0xA0", "unknown"),
     *[_w(a, f"Serial number characters {2 * (a - 0xA1)}-{2 * (a - 0xA1) + 1}", "identity") for a in range(0xA1, 0xAB)],
-    _w(0xAB, "Word 0xAB", "unknown"),
+    _w(0xAB, "PIN check register (last PIN entered; temporary)", "live"),
     *[_w(a, f"Word 0x{a:02X}", "unknown") for a in range(0xAC, 0xB4)],
     # 0xB2 block: one-wire display protocol
     *[(_lo if i % 2 == 0 else _hi)(0xB4 + i // 2, f"One-wire sequence byte {i}", "setting") for i in range(8)],
@@ -281,7 +281,8 @@ FIELDS: list[Field] = [
     _w(0xDA, "Global state 4", "live"),
     _w(0xDB, "Motor temperature", "live", signed=True),
     # 0xDC block: more fault counters (the app also reads bit 7 of 0xE1 as a channel flag)
-    *[_w(0xDC + i, f"Fault counter {12 + i}", "counter") for i in range(6)],
+    _w(0xDC, "Fault/status word 12 (moves on its own)", "live"),
+    *[_w(0xDC + i, f"Fault counter {12 + i}", "counter") for i in range(1, 6)],
     # 0xF4 / 0xFA blocks: runtime
     _w(0xF4, "Word 0xF4", "live"),
     _lo(0xF5, "Word 0xF5 low byte", "live"),

@@ -13,8 +13,18 @@ class FakeClient:
 
 
 class ProbeAllowlistTest(unittest.TestCase):
-    def test_only_hello_is_allowed(self):
-        self.assertEqual(probe.ALLOWED_WRITES, {bytes.fromhex("aa13ec07015f10ef")})
+    def test_only_hello_and_default_pin_entry_are_allowed(self):
+        self.assertEqual(
+            probe.ALLOWED_WRITES,
+            {bytes.fromhex("aa13ec07015f10ef"), bytes.fromhex("aac6abab3414c7e6")},
+        )
+
+    def test_other_pins_are_refused(self):
+        client = FakeClient()
+        for digits in (b"\x00\x00", b"\x12\x34", b"\x34\x15"):
+            with self.assertRaises(PermissionError):
+                asyncio.run(probe.safe_write(client, probe._addr_write(0xAB, digits), lambda _: None))
+        self.assertEqual(client.writes, [])
 
     def test_other_frames_are_refused(self):
         client = FakeClient()
