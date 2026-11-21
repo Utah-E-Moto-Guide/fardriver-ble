@@ -1,7 +1,7 @@
 import unittest
 
 from fardriver_ble import snapshot as snap
-from fardriver_ble.address_map import BY_ADDR, FIELDS, check_coverage, field_changes
+from fardriver_ble.address_map import BY_ADDR, FIELDS, check_coverage, field_changes, risk
 from fardriver_ble.decode import FLASH_READ_ADDR, TELEMETRY_ADDRS
 
 BASELINE = "2026-11-21T202712Z_baseline"
@@ -59,6 +59,28 @@ class AddressMapTest(unittest.TestCase):
         new[0xD3] = (new[0xD3] & 0xFF00) | ((new[0xD3] + 1) & 0xFF)  # only the live average-speed byte
         rows = field_changes(old, new)
         self.assertEqual([(r["field"], r["kind"]) for r in rows], [("Average speed (live)", "live")])
+
+
+class RiskTest(unittest.TestCase):
+    def names(self, r):
+        return {f.name for f in FIELDS if risk(f) == r}
+
+    def test_command_binding_and_identity_are_never(self):
+        for f in FIELDS:
+            if f.addr == 0xA0 or 0xAB <= f.addr <= 0xB1 or 0xA1 <= f.addr <= 0xAA:
+                self.assertEqual(risk(f), "never", f.name)
+
+    def test_safety_settings_are_never(self):
+        never = self.names("never")
+        for name in ("Brake input mode (4 = brake disabled)", "Motor direction reversed", "Side-stand input pin",
+                     "Low-voltage cutoff", "Motor temperature limit", "Motor pole pairs", "Position sensor type"):
+            self.assertIn(name, never)
+
+    def test_safe_set_is_small_and_known(self):
+        self.assertEqual(self.names("safe"), {
+            "Throttle acceleration step", "Throttle deceleration step", "Throttle release response",
+            "Acceleration curve update interval", "ECO acceleration coefficient", "ECO mode",
+        })
 
 
 if __name__ == "__main__":

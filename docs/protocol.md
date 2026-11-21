@@ -187,3 +187,21 @@ PIN-check register is temporary (RAM) and today's PIN test left nothing behind. 
 
 Also fixed: the capture timeout counted the BLE connect (16-25 s at the bike), so a slow connect could starve
 the read. The timeout now starts after connecting; `stats.connect_seconds` records the connect time.
+
+## Community notes and write risk (2026-11-21)
+
+Cross-checked the blocks the app never displays against the MIT-licensed jackhumbert/fardriver-controllers
+struct notes (fetched locally, not vendored):
+- **0xA0 is the system-command register.** `88 xx` written there runs actions: 08 = factory reset,
+  09/0A reset pin assignments, 0B..0D reset curves, 02/03 start self-learning. Ours reads `88 04`.
+  It lies inside the `.heb` main section, so any future restore must handle it deliberately.
+- 0xAC..0xB1: PIN / owner phone-number store. Strings are `chr(0xB0 + len) + text`; 0xAD = 0xB0 = empty.
+- 0x0B: brake mode (4 = disabled), temp sensor, phase exchange, slow-down, race response, current anti-theft,
+  park mode, direction. 0x67 production max voltage, 0x68 production max current. 0xF4 motor temp, 0xF5 hi SOC,
+  0xF6..0xF7 last-modified date, 0xF8/0xF9 firmware loop times (/8 us). 0xDC..0xE1 are three 32-bit counters.
+- Remaining unknown: high bytes of 0x14, 0x2C, 0x65, 0x9F; spare bits of 0x86, 0x9C; 0xB2, 0xB3 (zero) and 0xB9.
+
+Every field now has a write risk (`address_map.risk`): 6 safe-to-nudge comfort settings (throttle
+accel/decel/release, curve interval, ECO mode and ECO acceleration), caution for ride/performance settings,
+never for commands, binding, identity, calibration, unknowns and anything touching brakes, interlocks,
+wiring, direction or protection. Discovery tests should only nudge a "safe" field.
