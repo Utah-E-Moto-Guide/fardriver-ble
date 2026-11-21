@@ -47,6 +47,18 @@ Each snapshot is a folder in `snapshots/` with `snapshot.json` (every word, with
 Diffs list setting changes first. Words the controller changes on its own, and anything the
 app's own backup leaves out, are listed separately.
 
+## Guided tuning
+
+The `fardriver-tune` skill (`skills/fardriver-tune/SKILL.md`, linked into `~/.claude/skills/`) runs a
+garage-to-trail loop with the `tune_*` MCP tools: state a goal, try one small change (RAM-only by
+default: turning the key off undoes it), ride, report how it felt, then keep (save) or revert.
+Advice comes from `knowledge/settings.yml`, where every note is tagged with its source (manual, app,
+GDriver, owner, session, community, reasoning) and a confidence. Sessions are logged in `sessions/`.
+`tune_audit` compares the settings with the Fardriver manual's guidance.
+
+Only six comfort settings are tunable (throttle acceleration, deceleration and release response,
+curve interval, throttle response profile, ECO acceleration). Everything else is refused.
+
 ## Layout
 
 - `fardriver_ble/crc.py`: frame checksums
@@ -55,6 +67,11 @@ app's own backup leaves out, are listed separately.
 - `fardriver_ble/snapshot.py`: capture, save, load, diff
 - `fardriver_ble/names.py`: what we know about each address
 - `fardriver_ble/mcp_server.py`: the MCP tools
+- `fardriver_ble/nudge.py`: the only setting-write path (allow list, limits, guarded Save)
+- `fardriver_ble/tune.py`: tuning sessions and the manual-based audit
+- `knowledge/settings.yml`: sourced tuning knowledge
+- `skills/fardriver-tune/`: the Claude Code skill
+- `sessions/`: tuning session logs
 - `snapshots/`: saved snapshots
 - `tools/unpack_xamarin_blob.py`: pull .NET assemblies out of the app's APK (local use only)
 - `docs/protocol.md`: what we know, and the live test log

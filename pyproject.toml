@@ -3,7 +3,7 @@ name = "fardriver-ble"
 version = "0.1.0"
 description = "Read-only BLE backups of a Fardriver motor controller"
 requires-python = ">=3.11"
-dependencies = ["bleak>=1.0", "mcp>=2"]
+dependencies = ["bleak>=1.0", "mcp>=2", "pyyaml>=6"]
 
 [build-system]
 requires = ["setuptools>=68"]

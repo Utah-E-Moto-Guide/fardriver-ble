@@ -263,3 +263,13 @@ as the app does). Bit fields rebuild the word from a fresh read, changing only t
 Live RAM-only test (`tools/test_allowlist_live.py`): each stepped once, read back twice, restored from the
 start snapshot via restore_from. All passed; bit-field steps changed only their own field; end vs start:
 no setting changes, save count 134 throughout.
+
+## Tune tool (2026-11-21)
+
+`fardriver_ble/tune.py` + `tune_*` MCP tools + `skills/fardriver-tune`. Knowledge in `knowledge/settings.yml`
+(sourced notes; manual PDF facts in our own words). Manual corrections to the map: 0x9C AN = motor type
+constant (ours 16, IPM) and LM = motor matching (ours 22, manual default), both calibration/never.
+Audit against the manual flags: low-voltage cutoff 60 V (manual ~63 V for 72 V), regen max +100% over
+normal (manual 25-50%), mid/low gear ratios above the manual's typical (factory choices), and the
+throttle-full alarm at 4.25 V. Mechanics test over MCP (`sessions/2026-11-21-1603`, marked as a test):
+start, RAM-only try 64 -> 60, second change refused, feedback (value still active), revert to 64, finish.

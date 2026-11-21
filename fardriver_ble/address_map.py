@@ -216,10 +216,10 @@ FIELDS: list[Field] = [
         for i in range(20)
     ],
     # 0x9C block
-    _bits(0x9C, 0, 5, "Auxiliary input mode (AN)", "setting"),
+    _bits(0x9C, 0, 5, "Motor type constant AN (0 surface-mount, 16 IPM)", "calibration"),
     _bits(0x9C, 5, 1, "Relay output enabled", "setting"),
     _bits(0x9C, 6, 2, "No-load mode", "setting"),
-    _bits(0x9C, 8, 6, "Low-battery limiting mode (LM)", "setting"),
+    _bits(0x9C, 8, 6, "Motor matching LM (smoothness; manual default 22)", "calibration"),
     _bits(0x9C, 14, 2, "Word 0x9C bits 14-15", "unknown"),
     _w(0x9D, "Initial voltage", "calibration", signed=True),
     _w(0x9E, "Turtle-speed current coefficient", "setting"),
