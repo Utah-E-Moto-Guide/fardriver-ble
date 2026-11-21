@@ -1,16 +1,20 @@
 """Capture, save, load and diff controller settings snapshots. Read-only.
 
-The only thing ever written to the controller is the app's hello/keep-alive,
-through probe.safe_write and its allowlist.
+Writes go only through probe.safe_write and its allowlist: the hello/keep-alive and
+the app's request for the second settings section. No setting is ever written.
 
-A capture is complete when every parameter block has been read twice in a row
-with identical values (volatile words excepted). That guards against a frame
-that passed CRC but caught a value mid-update.
+A capture is complete when every parameter block and every second-section frame
+(ids 56..87) has been read twice in a row with identical values (live words excepted).
+That guards against a frame that passed CRC but caught a value mid-update.
+
+A complete snapshot saves `controller.heb`, the same 696-byte format the phone apps
+export (156 main words + 192 second-section words).
 """
 
 import asyncio
 import json
 import re
+import struct
 import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -21,9 +25,10 @@ from bleak import BleakClient
 from . import address_map, names
 from .decode import FLASH_READ_ADDR, HEB_ADDRS, TELEMETRY_ADDRS, frame_block, heb_main_words
 from .listen import CHAR, DEVICE_INFO, Framer
-from .probe import HELLO, safe_write
+from .probe import HELLO, REQUEST_SECOND_SECTION, safe_write
 
 PARAM_BLOCKS = tuple(sorted(set(FLASH_READ_ADDR) - TELEMETRY_ADDRS))
+SECOND_IDS = range(56, 88)  # 32 frames x 6 words = 192 words
 REPO = Path(__file__).resolve().parent.parent
 DEFAULT_DIR = REPO / "snapshots"
 
@@ -36,6 +41,7 @@ class Snapshot:
     serial: str = ""
     device_info: dict = field(default_factory=dict)
     stats: dict = field(default_factory=dict)
+    second: list[int] = field(default_factory=list)  # .heb second section, 192 words when read
 
     def to_json(self) -> str:
         d = asdict(self)
@@ -52,17 +58,25 @@ class Snapshot:
 
     @classmethod
     def from_heb(cls, path: Path) -> "Snapshot":
-        words = heb_main_words(Path(path).read_bytes())
+        data = Path(path).read_bytes()
+        words = heb_main_words(data)
+        second = list(struct.unpack("<192H", data[312:696]))
         m = re.match(r"(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})", Path(path).name)  # GDriver naming
         if m:
             taken = f"{m[1]}T{m[2]}:{m[3]}:{m[4]}+00:00"
         else:
             taken = datetime.fromtimestamp(Path(path).stat().st_mtime, timezone.utc).isoformat(timespec="seconds")
-        return cls(taken_at=taken, source=f"heb:{path}", words=words, serial=names.decode_serial(words))
+        return cls(taken_at=taken, source=f"heb:{path}", words=words, serial=names.decode_serial(words), second=second)
 
     def heb_main_section(self) -> bytes:
         """The 312-byte first section of a .heb, for comparison only. NOT importable on its own."""
         return b"".join(self.words[a].to_bytes(2, "little") for a in HEB_ADDRS)
+
+    def heb(self) -> bytes | None:
+        """The full 696-byte .heb, or None if the second section wasn't read."""
+        if len(self.second) != 192:
+            return None
+        return self.heb_main_section() + struct.pack("<192H", *self.second)
 
 
 class _Collector:
@@ -72,11 +86,23 @@ class _Collector:
         self.confirmed: dict[int, list[int]] = {}
         self.reads = 0
         self.mismatches = 0
+        self.last2: dict[int, bytes] = {}
+        self.confirmed2: dict[int, bytes] = {}
 
     def feed(self, data: bytes):
         self.framer.feed(data)
 
     def _on_frame(self, f: bytes):
+        fid = f[1] & 0x7F
+        if fid in SECOND_IDS:
+            prev = self.last2.get(fid)
+            self.last2[fid] = f[2:14]
+            if prev == f[2:14]:
+                self.confirmed2[fid] = f[2:14]
+            elif prev is not None:
+                self.mismatches += 1
+                self.confirmed2.pop(fid, None)
+            return
         b = frame_block(f)
         if not b or b[0] in TELEMETRY_ADDRS:
             return
@@ -95,6 +121,16 @@ class _Collector:
 
     def done(self) -> bool:
         return all(a in self.confirmed for a in PARAM_BLOCKS)
+
+    def second_done(self) -> bool:
+        return all(i in self.confirmed2 for i in SECOND_IDS)
+
+    def second_words(self) -> list[int]:
+        out = []
+        for i in SECOND_IDS:
+            b = self.confirmed2[i]
+            out += [b[k] | (b[k + 1] << 8) for k in range(0, 12, 2)]
+        return out
 
 
 async def capture(mac: str, timeout: float = 30.0, keepalive: float = 1.0, attempts: int = 3) -> Snapshot:
@@ -121,10 +157,14 @@ async def _capture_once(mac: str, timeout: float, keepalive: float) -> Snapshot:
             except Exception as e:  # noqa: BLE001
                 info[key] = f"<{type(e).__name__}>"
         await client.start_notify(CHAR, lambda _, d: col.feed(bytes(d)))
-        writes = 0
+        writes = requests = 0
         next_hello = 0.0
-        while not col.done() and time.monotonic() - t0 < timeout:
+        while not (col.done() and col.second_done()) and time.monotonic() - t0 < timeout:
             if time.monotonic() >= next_hello:
+                if not col.second_done() and writes % 5 == 0:
+                    await safe_write(client, REQUEST_SECOND_SECTION, lambda _: None)
+                    requests += 1
+                    await asyncio.sleep(0.01)
                 await safe_write(client, HELLO, lambda _: None)
                 writes += 1
                 next_hello = time.monotonic() + keepalive
@@ -142,9 +182,12 @@ async def _capture_once(mac: str, timeout: float, keepalive: float) -> Snapshot:
         words=words,
         serial=names.decode_serial(words),
         device_info=info,
+        second=col.second_words() if col.second_done() else [],
         stats={
             "seconds": round(time.monotonic() - t0, 1),
+            "second_section": "complete" if col.second_done() else f"missing {sum(i not in col.confirmed2 for i in SECOND_IDS)} frames",
             "hello_writes": writes,
+            "second_section_requests": requests,
             "block_reads": col.reads,
             "unstable_reads": col.mismatches,
             "bad_crc": col.framer.bad_crc,
@@ -158,7 +201,11 @@ def save(snap: Snapshot, root: Path = DEFAULT_DIR, label: str = "") -> Path:
     d = Path(root) / name
     d.mkdir(parents=True, exist_ok=False)
     (d / "snapshot.json").write_text(snap.to_json())
-    (d / "heb_main_section.bin.NOT_IMPORTABLE").write_bytes(snap.heb_main_section())
+    full = snap.heb()
+    if full:
+        (d / "controller.heb").write_bytes(full)
+    else:
+        (d / "heb_main_section.bin.NOT_IMPORTABLE").write_bytes(snap.heb_main_section())
     return d
 
 
@@ -186,13 +233,18 @@ def diff(old: Snapshot, new: Snapshot) -> dict:
     """Field-level changes grouped by kind (settings first)."""
     common = set(old.words) & set(new.words)
     rows = address_map.field_changes({a: old.words[a] for a in common}, {a: new.words[a] for a in common})
+    if len(old.second) == 192 and len(new.second) == 192:
+        rows += [
+            {"addr": f"S{i:03d}", "field": f"Second section word {i}", "kind": "unknown", "old": o, "new": n, "unit": ""}
+            for i, (o, n) in enumerate(zip(old.second, new.second)) if o != n
+        ]
     groups = {k: [r for r in rows if r["kind"] == k] for k in address_map.KIND_ORDER}
     return {
         "old": {"taken_at": old.taken_at, "source": old.source, "serial": old.serial,
                 "saved": names.decode_save_time(old.words), "save_count": old.words.get(0x05)},
         "new": {"taken_at": new.taken_at, "source": new.source, "serial": new.serial,
                 "saved": names.decode_save_time(new.words), "save_count": new.words.get(0x05)},
-        "compared_words": len(common),
+        "compared_words": len(common) + (192 if len(old.second) == len(new.second) == 192 else 0),
         "same_controller": bool(old.serial) and old.serial == new.serial,
         "changes": groups,
     }

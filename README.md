@@ -6,8 +6,9 @@ controller on an X-Pro Drax Apex.
 
 ## Rules
 
-- **Read-only first.** Nothing here writes settings or flash. Any write, even the app's
-  harmless hello, gets added deliberately, one command at a time, and logged in `docs/protocol.md`.
+- **Read-only.** Nothing here writes settings or flash. The allowlist in `probe.py` holds exactly
+  three frames: the hello/keep-alive, entering the default PIN, and the request for the second
+  settings section. Each was added deliberately and is logged in `docs/protocol.md`.
 - **No Fardriver code in this repo.** The APK, unpacked DLLs and decompiled source stay
   local and are ignored by git. Notes are in our own words.
 - **Never change the controller PIN** (factory default 3414). The tool has no PIN-change or
@@ -38,10 +39,10 @@ Or by hand:
 .venv/bin/python -m unittest
 ```
 
-Each snapshot is a folder in `snapshots/` with `snapshot.json` (every word, with labels where
-known) and `heb_main_section.bin.NOT_IMPORTABLE`, the first 312 bytes of a `.heb`, for comparing
-with phone-app exports. It is deliberately not a `.heb`: the app's import writes the whole file,
-and we can't read the second section yet, so a padded file would wipe it.
+Each snapshot is a folder in `snapshots/` with `snapshot.json` (every word, with labels) and
+`controller.heb`, the same 696-byte format the phone apps export: the 156-word main section plus the
+192-word second section. If the second section can't be read, the folder gets
+`heb_main_section.bin.NOT_IMPORTABLE` instead, never a padded `.heb` that would wipe that section.
 
 Diffs list setting changes first. Words the controller changes on its own, and anything the
 app's own backup leaves out, are listed separately.

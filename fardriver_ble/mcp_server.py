@@ -1,7 +1,7 @@
 """MCP server: back up and compare Fardriver controller settings by asking an AI.
 
-Read-only. The only write any tool can make is the app's hello/keep-alive
-(allowlisted in probe.py). There is deliberately no restore or set tool.
+Read-only. Writes are limited to the allowlist in probe.py (hello/keep-alive, default
+PIN entry, second-section request). There is deliberately no restore, set or PIN-change tool.
 
 Run: .venv/bin/python -m fardriver_ble.mcp_server
 """
@@ -27,9 +27,10 @@ async def fardriver_scan(seconds: float = 8.0) -> str:
 
 @mcp.tool()
 async def fardriver_snapshot(mac: str, label: str = "") -> str:
-    """Read the controller's full settings memory over BLE and save a dated snapshot.
+    """Read the controller's full settings over BLE and save a dated snapshot with a .heb backup.
 
-    Read-only: sends only the app's hello/keep-alive. Takes a few seconds.
+    Read-only: sends only the app's hello/keep-alive and its second-section request.
+    Takes about 5-10 seconds after the (slow) connect.
     """
     s = await snap.capture(mac)
     d = snap.save(s, label=label)
