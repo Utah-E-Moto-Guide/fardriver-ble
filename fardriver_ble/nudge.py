@@ -1,7 +1,11 @@
-"""Nudge one safe setting by one step, the way the app does, and verify it.
+"""Change one allowed setting, the way the app does, and verify it.
 
-Guardrails:
-- Only fields listed in NUDGEABLE (risk "safe", with the app's own limits, in raw units).
+Guardrails (policy in policy.py):
+- Only fields in policy.SPECS, never a never-write field; limits and step sizes in display units.
+- The proposed state must pass policy.violations (factory current ceiling, gear order, regen order,
+  power curve never rising, ...). High-tier fields (currents, power curve) need acknowledge_risk.
+- After every write the controller's fault bits (0xE3) are watched; a new fault makes the tool
+  write the previous value back immediately and report it.
 - Bit fields are written the way the app does: the whole word is rebuilt from a fresh
   reading, changing only the field's bits.
 - One step from the current value, or back to the value in an earlier snapshot
@@ -29,22 +33,17 @@ from pathlib import Path
 from bleak import BleakClient
 
 from . import snapshot as snap
-from .address_map import FIELDS, risk
+from . import policy
+from .address_map import FIELDS, faults, risk
 from .decode import frame_block
 from .listen import CHAR, Framer
 from .probe import HELLO, safe_write
 
-# field name -> (min, max) raw value, from the app's own input checks
+# field name -> (min, max) RAW value, derived from the display-unit policy
 NUDGEABLE = {
-    "Throttle acceleration step": (2, 224),
-    "Throttle deceleration step": (4, 224),
-    "Throttle release response": (0, 192),
-    "Acceleration curve update interval": (4, 1000),
-    "Throttle response profile (0 Line, 1 Sport, 2 ECO)": (0, 2),
-    "ECO acceleration coefficient": (1, 8),
+    n: tuple(sorted((policy.to_raw(n, s.lo), policy.to_raw(n, s.hi)))) for n, s in policy.SPECS.items()
 }
-# The app only writes ECO acceleration when it is already non-zero (feature present).
-REQUIRES_NONZERO = {"ECO acceleration coefficient"}
+REQUIRES_NONZERO = {n for n, s in policy.SPECS.items() if s.requires_nonzero}
 FORBIDDEN_ADDRS = {0xA0, 0x22, 0x23, 0x24}  # command register and save stamp
 
 
@@ -57,15 +56,15 @@ def new_word(name: str, raw: int, current_word: int) -> int:
     if name not in NUDGEABLE:
         raise PermissionError(f"{name!r} is not nudgeable")
     f = _field(name)
-    if risk(f) != "safe" or f.addr in FORBIDDEN_ADDRS:
-        raise PermissionError(f"{name!r} is not a safe field")
+    if risk(f) == "never" or f.addr in FORBIDDEN_ADDRS:
+        raise PermissionError(f"{name!r} is a never-write field")
     if name in REQUIRES_NONZERO and f.raw(current_word) == 0:
         raise PermissionError(f"{name!r} is 0 on this controller; the app does not write it then")
     lo, hi = NUDGEABLE[name]
     if not lo <= raw <= hi:
         raise ValueError(f"{raw} outside the app's range {lo}..{hi}")
     mask = ((1 << f.bits) - 1) << f.lo
-    return (current_word & ~mask & 0xFFFF) | (raw << f.lo)
+    return (current_word & ~mask & 0xFFFF) | ((raw & ((1 << f.bits) - 1)) << f.lo)
 
 
 def setting_frame(name: str, raw: int, current_word: int = 0) -> bytes:
@@ -78,19 +77,30 @@ def setting_frame(name: str, raw: int, current_word: int = 0) -> bytes:
     return body + crc16_bytes(body)
 
 
-def check_step(name: str, current: int, new: int, restore_value: int | None, max_step: int = 1) -> None:
+def check_step(name: str, current: float, new: float, restore_value: float | None, max_step: float = 1) -> None:
+    """Display-unit step check; going back to a recorded value is always allowed."""
     if new == restore_value:
         return
-    if abs(new - current) > max_step:
-        raise ValueError(f"{name}: {current} -> {new} is more than {max_step} step(s) (use --restore-from to go back)")
+    if abs(new - current) > max_step + 1e-9:
+        raise ValueError(f"{name}: {current} -> {new} is a bigger step than {max_step} (go in smaller steps)")
+
+
+def _word_frame(addr: int, word: int) -> bytes:
+    from .crc import crc16_bytes
+
+    body = bytes([0xAA, 0xC6, addr, addr, word & 0xFF, word >> 8])
+    return body + crc16_bytes(body)
 
 
 async def _write_and_verify(
-    mac: str, name: str, raw: int, current_word: int, log_dir: Path, timeout: float = 25.0
+    mac: str, name: str, raw: int, current_word: int, log_dir: Path, timeout: float = 25.0, watch: float = 6.0
 ) -> dict:
     f = _field(name)
     frame = setting_frame(name, raw, current_word)
     target = new_word(name, raw, current_word)
+    fault_before: int | None = None
+    fault_after = 0
+    t_readback = None
     block = max(b for b in snap.PARAM_BLOCKS if b <= f.addr)  # the stream block holding this word
     seen_new = 0
     started = False
@@ -102,12 +112,19 @@ async def _write_and_verify(
             raw.write(f"{time.monotonic() - t0:8.3f} {line}\n")
 
         def on_frame(fr: bytes):
-            nonlocal seen_new, started
+            nonlocal seen_new, started, fault_before, fault_after, t_readback
             b = frame_block(fr)
+            if b and b[0] == 0xE2:  # live block: word 0xE3 holds the fault bits
+                if not wrote:
+                    fault_before = b[1][1]
+                else:
+                    fault_after |= b[1][1]
             if b and b[0] == block:
                 started = True
                 if b[1][f.addr - block] == target and wrote:
                     seen_new += 1
+                    if seen_new >= 2 and t_readback is None:
+                        t_readback = time.monotonic()
 
         framer = Framer(on_frame=on_frame)
         wrote = False
@@ -124,19 +141,33 @@ async def _write_and_verify(
             await client.start_notify(CHAR, lambda _, d: (log(f"RX {bytes(d).hex()}"), framer.feed(bytes(d))))
             t_read = time.monotonic()
             next_hello = 0.0
-            while time.monotonic() - t_read < timeout and seen_new < 2:
+            auto_reverted = None
+            while time.monotonic() - t_read < timeout:
+                if t_readback is not None and time.monotonic() - t_readback > watch:
+                    break
                 if time.monotonic() >= next_hello:
                     await safe_write(client, HELLO, log)
                     next_hello = time.monotonic() + 1.0
-                if started and not wrote:
+                if started and not wrote and fault_before is not None:
                     log(f"TX {frame.hex()}  ({name} -> raw {raw}, word {target:#06x})")
                     await client.write_gatt_char(CHAR, frame, response=False)
                     wrote = True
+                new_faults = fault_after & ~(fault_before or 0)
+                if wrote and new_faults and auto_reverted is None:
+                    back = _word_frame(f.addr, current_word)
+                    log(f"TX {back.hex()}  (AUTO-REVERT after faults {faults(new_faults)})")
+                    await client.write_gatt_char(CHAR, back, response=False)
+                    auto_reverted = faults(new_faults)
+                    break
                 await asyncio.sleep(0.05)
             await client.stop_notify(CHAR)
         finally:
             await client.disconnect()
-    return {"wrote": wrote, "frame": frame.hex(), "read_back_twice": seen_new >= 2}
+    return {
+        "wrote": wrote, "frame": frame.hex(), "read_back_twice": seen_new >= 2,
+        "faults_before": faults(fault_before or 0), "new_faults": faults(fault_after & ~(fault_before or 0)),
+        "auto_reverted": auto_reverted,
+    }
 
 
 def _addr_frame(addr: int, payload: bytes) -> bytes:
@@ -219,36 +250,48 @@ async def _send_save(mac: str, log_dir: Path) -> dict:
 
 
 async def nudge(
-    mac: str, name: str, value: int | None = None, label: str = "nudge",
-    restore_from: str | None = None, save: bool = False, max_step: int = 1,
+    mac: str, name: str, value: float | None = None, label: str = "nudge",
+    restore_from: str | None = None, save: bool = False, acknowledge_risk: bool = False,
 ) -> dict:
-    """Set one allowed field (raw units). value=None with restore_from puts back that snapshot's value."""
+    """Set one allowed field. value is in DISPLAY units (A, RPM, %, s, ms); value=None with
+    restore_from puts back that snapshot's value for this field."""
+    if name not in policy.SPECS:
+        raise PermissionError(f"{name!r} is not changeable here; see fardriver_settable")
+    spec = policy.SPECS[name]
+    if spec.tier == "high" and not acknowledge_risk:
+        raise PermissionError(f"{name!r} is high risk: explain the risk to the owner, then pass acknowledge_risk=True")
     f = _field(name)
-    if name not in NUDGEABLE:
-        raise PermissionError(f"{name!r} is not nudgeable; allowed: {sorted(NUDGEABLE)}")
-    restore_value = f.raw(snap.load(restore_from).words[f.addr]) if restore_from else None
+    restore_display = f.value(snap.load(restore_from).words[f.addr]) if restore_from else None
     if value is None:
-        if restore_value is None:
+        if restore_display is None:
             raise ValueError("give a value or restore_from")
-        value = restore_value
+        value = restore_display
+    raw = policy.to_raw(name, value)
     before = await snap.capture(mac)
     word = before.words[f.addr]
-    current = f.raw(word)
-    if value == current:
-        return {"field": name, "unchanged": True, "value": current, "display": f.value(word), "unit": f.unit}
-    check_step(name, current, value, restore_value, max_step)
-    target = new_word(name, value, word)
+    current = f.value(word)
+    if raw == f.raw(word):
+        return {"field": name, "unchanged": True, "value": current, "unit": f.unit}
+    check_step(name, current, policy.to_display(name, raw), restore_display, spec.max_step)
+    target = new_word(name, raw, word)
+    proposed = dict(before.words)
+    proposed[f.addr] = target
+    bad = policy.violations(proposed)
+    if bad and value != restore_display:
+        raise ValueError("refused by sanity rules: " + "; ".join(bad))
     bdir = snap.save(before, label=f"{label}-before")
-    result = await _write_and_verify(mac, name, value, word, snap.REPO / "captures" / f"{bdir.name}-write")
+    watch = 10.0 if spec.tier == "high" else 6.0
+    result = await _write_and_verify(mac, name, raw, word, snap.REPO / "captures" / f"{bdir.name}-write", watch=watch)
     after = await snap.capture(mac)
     adir = snap.save(after, label=f"{label}-after")
     out = {
-        "field": name, "from": current, "to": value,
-        "display_from": f.value(word), "display_to": f.value(target), "unit": f.unit,
+        "field": name, "tier": spec.tier, "from": current, "to": f.value(target), "unit": f.unit,
         **result, "before": bdir.name, "after": adir.name,
     }
     if save:
         problems = presave_check(before, after, name, f.value(target))
+        if result.get("auto_reverted"):
+            problems = [f"auto-reverted after faults {result['auto_reverted']}"] + problems
         if problems or not result["read_back_twice"]:
             out["save"] = {"refused": problems or ["new value was not read back"]}
             out["diff"] = snap.format_diff(snap.diff(before, after))
@@ -267,11 +310,12 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("mac")
     ap.add_argument("field")
-    ap.add_argument("value", type=int, nargs="?", default=None)
+    ap.add_argument("value", type=float, nargs="?", default=None, help="display units")
     ap.add_argument("--label", default="nudge")
     ap.add_argument("--restore-from", default=None)
     ap.add_argument("--save", action="store_true", help="save to flash after a clean pre-save check")
+    ap.add_argument("--acknowledge-risk", action="store_true", help="required for high-tier fields")
     a = ap.parse_args()
-    r = asyncio.run(nudge(a.mac, a.field, a.value, a.label, a.restore_from, a.save))
+    r = asyncio.run(nudge(a.mac, a.field, a.value, a.label, a.restore_from, a.save, a.acknowledge_risk))
     print(r.pop("diff"))
     print(json.dumps(r, indent=2))

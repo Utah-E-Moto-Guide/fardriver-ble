@@ -12,26 +12,24 @@
 #   reasoning our inference; lowest confidence, say so when using it
 # confidence: high | medium | low
 #
-# `settable: true` fields can be changed by the tune tool; everything else is read-only
-# context for advice and audits. Field names match fardriver_ble/address_map.py.
+# `settable` = comfort fields with full notes; limits, steps and tiers for every changeable field
+# live in fardriver_ble/policy.py. `context` = notes for other fields (some changeable, some not). Field names match fardriver_ble/address_map.py.
 
 settable:
   - field: Throttle acceleration step
     plain: How fast the motor's output ramps up when you open the throttle. Higher is snappier.
-    raw_range: [2, 224]   # app limit; the manual describes 16..224
-    max_step: 16
     notes:
       - {source: manual, confidence: high, text: "Called acceleration sensitivity. 16..224; higher number = more sensitive. 16 is already very slow."}
       - {source: manual, confidence: high, text: "Electric cars ~32 and rarely above 64. E-motorcycles 32, many prefer 64 or 128 for quick response. Track racing up to 224."}
       - {source: owner, confidence: high, text: "Factory value was 175; the owner set it to 64 (confirmed 2026-11-21)."}
       - {source: community, confidence: medium, text: "MAXAPACITY lists factory 'Acc step 224' on the Apex dump they used; this owner's controller read 175 at the factory save stamp. Batch difference or a screenshot misread (the guide admits four such misreads)."}
+      - {source: owner, confidence: high, text: "The owner did not notice a change going 175 -> 64 (2026-11-21). They switched the profile Sport -> ECO around the same time."}
+      - {source: reasoning, confidence: low, text: "If the ECO profile ramps with the ECO acceleration coefficient (8, its maximum) instead of this step, the step may barely matter while in ECO. Unverified; test it in Sport to find out."}
       - {source: community, confidence: low, text: "CONFLICT: MAXAPACITY says 'lower is snappier, harder on the drivetrain' (proposes 224 -> 200). The Fardriver manual says higher = more sensitive. Unresolved; the owner's own 175 -> 64 experience should settle it. Ask before advising a direction."}
       - {source: owner, confidence: high, text: "On the Apex the limit on climbs is traction: the rear end spins out; the motor never runs out of pull (2026-11-08)."}
       - {source: reasoning, confidence: low, text: "A softer ramp makes it easier to feed power in without breaking the rear tire loose on loose climbs; too soft can feel laggy when you need a quick hop."}
   - field: Throttle deceleration step
     plain: How fast output drops when you close the throttle.
-    raw_range: [4, 224]
-    max_step: 16
     notes:
       - {source: app, confidence: high, text: "App label 'Throttle Dec Step'; accepts 4..224."}
       - {source: owner, confidence: high, text: "Factory 128; the owner set it to 64 (confirmed 2026-11-21)."}
@@ -39,24 +37,18 @@ settable:
       - {source: reasoning, confidence: low, text: "Lower should make roll-off gentler (less abrupt engine-brake-like change), higher makes the bike settle faster when you chop the throttle."}
   - field: Throttle release response
     plain: Response when the throttle is released (exact behaviour not documented).
-    raw_range: [0, 192]
-    max_step: 16
     notes:
       - {source: app, confidence: high, text: "App field 'FreeThrottle', accepts 0..192."}
       - {source: export, confidence: medium, text: "a third-party app calls it 'Throttle-release response'. Owner's value is 0."}
       - {source: reasoning, confidence: low, text: "Meaning is uncertain; change only in small steps and describe the feel carefully."}
   - field: Acceleration curve update interval
     plain: How often the throttle ramp is updated. Shown in the app as (raw + 1) x 2 ms.
-    raw_range: [4, 1000]
-    max_step: 10
     notes:
       - {source: app, confidence: high, text: "App field 'CurveTime', accepts raw 4..1000, displays (raw+1)*2 ms. Owner's raw 49 = 100 ms."}
       - {source: export, confidence: medium, text: "a third-party app: 'Acceleration-curve update interval'."}
       - {source: reasoning, confidence: low, text: "A longer interval probably stretches the ramp (smoother, slower); works together with the acceleration step."}
   - field: Throttle response profile (0 Line, 1 Sport, 2 ECO)
     plain: Overall throttle character. 0 = Line, 1 = Sport, 2 = ECO.
-    raw_range: [0, 2]
-    max_step: 2
     notes:
       - {source: app, confidence: high, text: "App menu 'ThrottleResponse: 0-Line, 1-Sport, 2-ECO'."}
       - {source: owner, confidence: high, text: "Was Sport (factory); the owner set ECO (confirmed 2026-11-21)."}
@@ -64,8 +56,6 @@ settable:
       - {source: reasoning, confidence: low, text: "ECO probably applies the ECO acceleration coefficient; Line is likely a direct (linear) map. Unverified."}
   - field: ECO acceleration coefficient
     plain: Acceleration strength used in the ECO throttle profile, 1..8.
-    raw_range: [1, 8]
-    max_step: 2
     notes:
       - {source: app, confidence: high, text: "App menu 'ECO Acc' 1..8; the app only writes it when it is already non-zero."}
       - {source: owner, confidence: medium, text: "Reads 8 (the maximum) on the owner's controller, 2026-11-21."}
@@ -127,6 +117,10 @@ audit:
   - id: throttle_full_alarm
     source: manual
     text: "A grip reading more than 0.6 V above the full-throttle threshold is treated as a fault and cuts output."
+
+faults:
+  - {source: app, confidence: high, text: "The controller reports faults as bits in live word 0xE3 (17 codes, 0 = System OK). Code 9 is Phase Current Overflow Protect; 15 is MOE current protect."}
+  - {source: reasoning, confidence: medium, text: "The 'Error 09' MAXAPACITY's owner got at 145A/400A is most likely code 9, phase current overflow: the current asked for exceeded what the hardware could deliver."}
 
 safety:
   - {source: community, confidence: medium, text: "Neutral (0) may still drive the Apex while some Bluetooth dongles are connected: reported by Utah E-Moto Guide (2026-11-15) and corroborated by MAXAPACITY on the Apex and Engwe Eagle. Cause unverified. Never treat neutral as a throttle lockout while connected: driven wheel off the ground, bike secured, hands off the throttle, people clear."}

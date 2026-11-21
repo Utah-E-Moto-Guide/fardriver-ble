@@ -17,8 +17,9 @@ class NudgeGuardTest(unittest.TestCase):
         body = bytes.fromhex("aac62f2f4100")  # throttle accel = 65
         self.assertEqual(nudge.setting_frame("Throttle acceleration step", 65), body + crc16_bytes(body))
 
-    def test_only_listed_safe_fields(self):
-        for name in ("Battery capacity", "Low-voltage cutoff", "High gear line current", "Motor pole pairs"):
+    def test_never_fields_refused(self):
+        for name in ("Low-voltage cutoff", "Motor pole pairs", "Brake input mode (4 = brake disabled)",
+                     "Motor matching LM (smoothness; manual default 22)", "Over-voltage cutoff", "Side-stand input pin"):
             with self.assertRaises(PermissionError):
                 nudge.setting_frame(name, 1)
 
@@ -65,11 +66,11 @@ class SaveGuardTest(unittest.TestCase):
 
 
 class AllowListTest(unittest.TestCase):
-    def test_every_allowed_field_is_safe(self):
+    def test_no_allowed_field_is_never_write(self):
         from fardriver_ble.address_map import risk
 
         for name in nudge.NUDGEABLE:
-            self.assertEqual(risk(nudge._field(name)), "safe", name)
+            self.assertNotEqual(risk(nudge._field(name)), "never", name)
 
     def test_profile_bits_only(self):
         name = "Throttle response profile (0 Line, 1 Sport, 2 ECO)"

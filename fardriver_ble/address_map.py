@@ -297,6 +297,11 @@ FIELDS: list[Field] = [
     # 0xDC..0xE1: the app joins these into three 32-bit values it calls Discover 20/19/18.
     # They move both ways (2540 -> 2538 on 2026-11-21), so they are live values, not counters.
     *[_w(0xDC + i, f"Discover value {20 - i // 2} ({'high' if i % 2 == 0 else 'low'} word)", "live") for i in range(6)],
+    # 0xE2 block (live telemetry, repeats every 7 frames)
+    _w(0xE2, "Status flags (gear, direction, PIN state)", "live"),
+    _w(0xE3, "Fault bits (0 = system OK)", "live"),
+    _w(0xE4, "Modulation ratio and status", "live"),
+    _w(0xE5, "Motor speed", "live", unit="RPM"),
     # 0xF4 / 0xFA blocks: runtime
     _w(0xF4, "Motor temperature", "live", unit="C", signed=True),
     _lo(0xF5, "Word 0xF5 low byte (scaled time?)", "live"),
@@ -409,3 +414,19 @@ def risk(f: Field) -> str:
     if any(w in f.name for w in NEVER_SETTING_WORDS):
         return "never"
     return "caution"
+
+
+# Fault bits in word 0xE3 (low byte = frame byte 4, high byte = byte 5), as the app names them.
+FAULTS = {
+    0: "1 Motor hall error", 1: "2 Throttle error", 2: "3 Current protect restart",
+    3: "4 Phase current surge", 4: "5 Over-voltage (or 18 under-voltage)", 5: "6 Anti-theft alarm",
+    6: "7 Motor over-temperature", 7: "8 Controller over-temperature",
+    8: "9 Phase current overflow", 9: "10 Phase zero-point fault", 10: "17 Phase loss (or 11 phase short)",
+    11: "12 Line current zero-point fault", 12: "13 MOSFET high-side fault", 13: "14 MOSFET low-side fault",
+    14: "15 MOE current protect (or 16 brake fault)",
+}
+
+
+def faults(word: int) -> list[str]:
+    """Names of the fault bits set in word 0xE3; [] means the app would show 'System OK'."""
+    return [name for bit, name in FAULTS.items() if word & (1 << bit)]

@@ -273,3 +273,13 @@ Audit against the manual flags: low-voltage cutoff 60 V (manual ~63 V for 72 V),
 normal (manual 25-50%), mid/low gear ratios above the manual's typical (factory choices), and the
 throttle-full alarm at 4.25 V. Mechanics test over MCP (`sessions/2026-11-21-1603`, marked as a test):
 start, RAM-only try 64 -> 60, second change refused, feedback (value still active), revert to 64, finish.
+
+## Wider allow list with tiers (2026-11-21)
+
+Owner: "allow wide exploration but no stupidity"; currents only at or below factory; power curve in small
+steps below 6000 RPM. `fardriver_ble/policy.py` holds 54 changeable fields in three tiers (comfort,
+caution, high) with display-unit limits and steps, and sanity rules that cannot be overridden (factory
+current ceiling, boost >= max, low <= mid <= high gear <= limiter <= 6000 RPM, max regen >= normal, power
+curve never rising). High tier needs `acknowledge_risk`. Fault bits: live word 0xE3 (17 codes; 9 = phase
+current overflow, likely MAXAPACITY's "Error 09"). Every write is followed by a fault watch (6 s, 10 s for
+high tier); a new fault writes the previous value back automatically.
