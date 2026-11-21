@@ -76,3 +76,10 @@ curve interval, throttle response profile, ECO acceleration). Everything else is
 - `tools/unpack_xamarin_blob.py`: pull .NET assemblies out of the app's APK (local use only)
 - `docs/protocol.md`: what we know, and the live test log
 - `captures/`: raw notification logs from the bike
+
+## Credits
+
+- **MAXAPACITY**, for their DRAX Apex FarDriver tuning guide: the Apex-specific stock settings, owner tune
+  results, safety practice and failure points that the tune tool's community notes are built on.
+- jackhumbert/fardriver-controllers (MIT), for the frame-to-address map and field notes.
+  See `THIRD_PARTY_NOTICES.md`.
