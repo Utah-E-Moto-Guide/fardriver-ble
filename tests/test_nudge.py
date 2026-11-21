@@ -32,5 +32,29 @@ class NudgeGuardTest(unittest.TestCase):
             self.assertNotIn(f.addr, nudge.FORBIDDEN_ADDRS)
 
 
+class SaveGuardTest(unittest.TestCase):
+    def test_save_frame_is_command_04_only(self):
+        self.assertEqual(nudge.SAVE_COMMAND.hex(), "aac6a0a08804c50c")
+        # Our builder reproduces the community-documented factory-reset frame (never sent).
+        self.assertEqual(nudge._addr_frame(0xA0, bytes([0x88, 0x08])).hex(), "aac6a0a08808c509")
+
+    def test_stamp_frame_format(self):
+        from datetime import datetime
+
+        f = nudge.save_stamp_frame(datetime(2026, 9, 27, 7, 15, 32))
+        self.assertEqual(f[:10].hex(), "aaca22221a091b070f20")  # yy mm dd hh mi ss
+
+    def test_presave_check_blocks_extra_changes(self):
+        from fardriver_ble import snapshot as snap
+
+        ref = snap.load("2026-11-21T215001Z_accel-65-before")
+        ok = snap.load("2026-11-21T215134Z_accel-65-after")
+        self.assertEqual(nudge.presave_check(ref, ok, "Throttle acceleration step", 65), [])
+        bad = snap.Snapshot(ok.taken_at, "test", dict(ok.words), serial=ok.serial, second=list(ok.second))
+        bad.words[0x1C] += 1  # battery capacity also differs: must refuse
+        self.assertTrue(nudge.presave_check(ref, bad, "Throttle acceleration step", 65))
+        self.assertTrue(nudge.presave_check(ref, ref, "Throttle acceleration step", 65))  # nudge missing
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -237,7 +237,7 @@ FIELDS: list[Field] = [
     # 0xB2 block: one-wire display protocol
     *[(_lo if i % 2 == 0 else _hi)(0xB4 + i // 2, f"One-wire sequence byte {i}", "setting") for i in range(8)],
     _w(0xB8, "One-wire field positions", "setting"),
-    _w(0xB9, "Word 0xB9 (changed with settings; not a simple checksum; app never reads it)", "unknown"),
+    _w(0xB9, "Save code (firmware recomputes it on every Save; formula unknown)", "unknown"),
     _lo(0xBA, "One-wire pulse width", "setting"),
     _hi(0xBA, "One-wire pulse period", "setting"),
     _w(0xBB, "One-wire current coefficient", "setting"),
@@ -294,13 +294,9 @@ FIELDS: list[Field] = [
     _w(0xDA, "Global state 4", "live"),
     _w(0xDB, "Motor temperature", "live", signed=True),
     # 0xDC block: more fault counters (the app also reads bit 7 of 0xE1 as a channel flag)
-    # 0xDC..0xE1: the app joins these into three 32-bit counters it calls Discover 20/19/18.
-    _w(0xDC, "Discover counter 20 (high word)", "live"),
-    _w(0xDD, "Discover counter 20 (low word)", "counter"),
-    _w(0xDE, "Discover counter 19 (high word)", "counter"),
-    _w(0xDF, "Discover counter 19 (low word)", "counter"),
-    _w(0xE0, "Discover counter 18 (high word)", "counter"),
-    _w(0xE1, "Discover counter 18 (low word)", "counter"),
+    # 0xDC..0xE1: the app joins these into three 32-bit values it calls Discover 20/19/18.
+    # They move both ways (2540 -> 2538 on 2026-11-21), so they are live values, not counters.
+    *[_w(0xDC + i, f"Discover value {20 - i // 2} ({'high' if i % 2 == 0 else 'low'} word)", "live") for i in range(6)],
     # 0xF4 / 0xFA blocks: runtime
     _w(0xF4, "Motor temperature", "live", unit="C", signed=True),
     _lo(0xF5, "Word 0xF5 low byte (scaled time?)", "live"),
