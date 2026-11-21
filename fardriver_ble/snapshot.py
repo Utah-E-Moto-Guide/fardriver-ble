@@ -193,8 +193,10 @@ def diff(old: Snapshot, new: Snapshot) -> dict:
     # Words the app's own backup leaves out are runtime data, not settings.
     maintained = names.VOLATILE | names.LIKELY_CONTROLLER_MAINTAINED | (set(common) - set(HEB_ADDRS))
     return {
-        "old": {"taken_at": old.taken_at, "source": old.source, "serial": old.serial},
-        "new": {"taken_at": new.taken_at, "source": new.source, "serial": new.serial},
+        "old": {"taken_at": old.taken_at, "source": old.source, "serial": old.serial,
+                "saved": names.decode_save_time(old.words)},
+        "new": {"taken_at": new.taken_at, "source": new.source, "serial": new.serial,
+                "saved": names.decode_save_time(new.words)},
         "compared_words": len(common),
         "same_controller": bool(old.serial) and old.serial == new.serial,
         "setting_changes": [row(*c) for c in changes if c[0] not in maintained],
@@ -206,6 +208,7 @@ def format_diff(d: dict) -> str:
     lines = [
         f"{d['old']['taken_at']} ({d['old']['source']})  ->  {d['new']['taken_at']} ({d['new']['source']})",
         f"serial {d['old']['serial'] or '?'} -> {d['new']['serial'] or '?'}; {d['compared_words']} words compared",
+        f"settings last saved {d['old']['saved']} -> {d['new']['saved']}",
     ]
     for title, key in (("Setting changes", "setting_changes"), ("Controller-maintained", "controller_maintained_changes")):
         rows = d[key]

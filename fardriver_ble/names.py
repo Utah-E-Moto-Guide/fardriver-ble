@@ -30,6 +30,17 @@ SETTINGS = {
     0xC5: ("Calibration", "Self-learn voltage high", "value-match"),
 }
 
+# Last settings-save timestamp, bytes (yy, mon), (day, hour), (min, sec), low byte first.
+# Factory value matched the serial's date (2026-05-23); after the owner's edits it read
+# 2026-09-27 07:15:32. Set by the saving app from the phone clock.
+SAVE_TIME_ADDRS = (0x22, 0x23, 0x24)
+
+
+def decode_save_time(words: dict[int, int]) -> str:
+    b = [x for a in SAVE_TIME_ADDRS for x in words.get(a, 0).to_bytes(2, "little")]
+    return f"20{b[0]:02d}-{b[1]:02d}-{b[2]:02d} {b[3]:02d}:{b[4]:02d}:{b[5]:02d}"
+
+
 # Controller serial number, ASCII, two characters per word (low byte first).
 SERIAL_ADDRS = range(0xA1, 0xAB)
 
@@ -46,6 +57,8 @@ def label(addr: int) -> str:
         return f"{section} / {name}"
     if addr in SERIAL_ADDRS:
         return "Serial number"
+    if addr in SAVE_TIME_ADDRS:
+        return "Last settings-save timestamp"
     if addr in VOLATILE:
         return "(changes on its own)"
     if addr in LIKELY_CONTROLLER_MAINTAINED:
