@@ -223,3 +223,7 @@ Frame `AA C6 2F 2F 41 00 89 A0`. Snapshots `accel-65-before` / `accel-65-after`:
   save stamp unchanged, 0xB9 unchanged, only 2 live fields moved.
 - So a single-setting write takes effect immediately without Save, and doesn't touch 0xB9.
 - Next: power cycle to see whether the unsaved value reverts to 64.
+- **Power cycle (2026-11-21, `accel-after-power-cycle`): throttle acceleration reverted 65 -> 64.** Versus the
+  before snapshot: no setting changes, save count 132, stamp unchanged. **Confirmed: a setting write without
+  Save is RAM-only and a power cycle undoes it.** Flash only changes on Save (`88 04` to 0xA0), which the
+  tool cannot send.
