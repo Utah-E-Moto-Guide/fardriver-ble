@@ -19,3 +19,6 @@ __pycache__/
 btsnoop_hci*
 *.egg-info/
 build/
+
+# local-only reverse-engineering workspace (APK, DLLs, decompiled source, SDK)
+local/

@@ -52,8 +52,8 @@ class SnapshotRoundTripTest(unittest.TestCase):
         b.words[0x1C] = a.words[0x1C] + 1  # a setting
         b.words[0xF5] = a.words[0xF5] + 1  # volatile
         d = snap.diff(a, b)
-        self.assertEqual([r["addr"] for r in d["setting_changes"]], ["0x1C"])
-        self.assertEqual([r["addr"] for r in d["controller_maintained_changes"]], ["0xF5"])
+        self.assertEqual([r["field"] for r in d["changes"]["setting"]], ["Battery capacity"])
+        self.assertEqual([r["addr"] for r in d["changes"]["live"]], ["0xF5"])
         self.assertTrue(d["same_controller"])
 
 
