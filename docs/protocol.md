@@ -205,3 +205,12 @@ Every field now has a write risk (`address_map.risk`): 6 safe-to-nudge comfort s
 accel/decel/release, curve interval, ECO mode and ECO acceleration), caution for ride/performance settings,
 never for commands, binding, identity, calibration, unknowns and anything touching brakes, interlocks,
 wiring, direction or protection. Discovery tests should only nudge a "safe" field.
+
+## How the app changes and saves a setting (2026-11-21)
+
+- Editing one value sends one address write, e.g. throttle acceleration (app limit 2..224):
+  `AA C6 2F 2F <lo> <hi> <crc16>`. Same frame shape as the PIN entry.
+- The Save button sends the phone's date/time as 6 bytes to 0x22 (the "last saved" stamp), then `88 04` to 0xA0:
+  **system command 04 = save to flash**. That's why 0xA0 reads `88 04`, and why the save count (0x05) rises
+  once per Save press (96 -> 132 = 36 presses).
+- Working assumption, untested: a value write without Save lives in RAM and reverts on power cycle.

@@ -226,7 +226,7 @@ FIELDS: list[Field] = [
     _lo(0x9F, "Voltage selection ratio", "setting"),
     _hi(0x9F, "Word 0x9F high byte", "unknown"),
     _lo(0xA0, "Command register marker (0x88)", "command"),
-    _hi(0xA0, "Command register: last system command", "command"),
+    _hi(0xA0, "Command register: last system command (04 = save to flash)", "command"),
     *[_w(a, f"Serial number characters {2 * (a - 0xA1)}-{2 * (a - 0xA1) + 1}", "identity") for a in range(0xA1, 0xAB)],
     _w(0xAB, "PIN check register (last PIN entered; temporary)", "live"),
     # 0xAC..0xB1: PIN / owner phone-number binding store. Strings are stored as
