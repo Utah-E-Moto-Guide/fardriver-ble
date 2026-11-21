@@ -99,4 +99,7 @@ Against a GDriver export from 2026-09-26 (owner's Dropbox, not committed):
   changed since September. Likely: 0x1C battery capacity 20 -> 35, 0x2F throttle acceleration 175 -> 64,
   0x2B throttle deceleration 128 -> 64 (from neighbours in the GDriver XLSX). Others unnamed:
   0x05 (96 -> 132), 0x1A, 0x22..0x24 (look like packed bytes / timestamp), 0x6D, 0x7D, 0x82, 0xB9, 0xD1, 0xD3.
+  **Owner confirmed (2026-11-21):** the three named changes cover their intentional edits. Treat the other 11
+  as controller-maintained (counters, timestamps, learned calibration, status): back them up, but report them
+  separately from setting changes in diffs. Names for them are still unknown.
 - bytes 312..695 (the 56..87 image) are almost all zero in that file (words 17 = 61440, 19 = 64).
