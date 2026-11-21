@@ -239,3 +239,9 @@ Result (`accel-65-save-saved`): save count 132 -> 133, stamp 2026-11-21 15:09:54
 known values match nothing. 0xDC..0xE1 move both ways, so they're live, not counters.
 Next: power cycle (expect 65 to persist), then nudge back to 64 with Save; if 0xB9 returns to 10699 it
 depends only on settings content.
+- Power cycle after the save (`accel-65-saved-power-cycle`): throttle accel **65 persisted**, count 133, 0xB9 5083.
+- Restore (`accel-64-restore-saved`): nudged back to 64 and saved: count 134, stamp 15:15:42, **0xB9 back to 10699**
+  even though stamp and count differ. So 0xB9 is a deterministic checksum of the settings content (it excludes
+  the stamp and save count). No standard CRC/sum over the visible settings matches; it's firmware-internal and
+  the firmware recomputes it on every Save, so we never need to compute it. Now kind "identity" (not unknown).
+- Net effect of the whole experiment vs `full-baseline`: settings identical, save count +2, new save stamp.
