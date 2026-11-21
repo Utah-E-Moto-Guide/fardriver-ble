@@ -1,0 +1,19 @@
+# Fardriver's code: keep local, never commit
+*.apk
+*.dll
+*.blob
+assemblies.manifest
+decomp/
+untrusted/
+third_party/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# BLE snoop logs can hold pairing keys
+*.log
+*.btsnoop
+btsnoop_hci*
