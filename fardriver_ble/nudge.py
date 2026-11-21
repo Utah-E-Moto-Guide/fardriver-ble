@@ -8,7 +8,7 @@ Guardrails:
   it is the only code path that can write a setting.
 - Snapshot before and after, and read the new value back from the live stream.
 
-Whether an unsaved write survives a power cycle is what this module is for finding out.
+Verified 2026-11-21: an unsaved write is RAM-only; a power cycle restores the saved value.
 
 Usage: python -m fardriver_ble.nudge <mac> "<field name>" <new value> [--restore-from SNAPSHOT]
 """
