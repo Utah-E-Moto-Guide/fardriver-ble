@@ -1,8 +1,11 @@
 """Nudge one safe setting by one step, the way the app does, and verify it.
 
 Guardrails:
-- Only fields listed in NUDGEABLE (whole-word, risk "safe", with the app's own limits).
-- One step from the current value, or back to a value from an earlier snapshot.
+- Only fields listed in NUDGEABLE (risk "safe", with the app's own limits, in raw units).
+- Bit fields are written the way the app does: the whole word is rebuilt from a fresh
+  reading, changing only the field's bits.
+- One step from the current value, or back to the value in an earlier snapshot
+  (restore_from), which is how a backup can be put back one setting at a time.
 - Save is opt-in (--save) and only after a pre-save check: working memory must differ from
   the snapshot taken just before the nudge in exactly the one intended setting. Save sends what
   the app's Save button sends: the local date/time to 0x22, then `88 04` (system command 04,
@@ -13,7 +16,7 @@ Guardrails:
 
 Verified 2026-11-21: an unsaved write is RAM-only; a power cycle restores the saved value.
 
-Usage: python -m fardriver_ble.nudge <mac> "<field name>" <new value> [--restore-from SNAPSHOT]
+Usage: python -m fardriver_ble.nudge <mac> "<field name>" [<raw value>] [--restore-from SNAPSHOT] [--save]
 """
 
 import argparse
@@ -31,7 +34,7 @@ from .decode import frame_block
 from .listen import CHAR, Framer
 from .probe import HELLO, safe_write
 
-# field name -> (min, max) from the app's own input checks
+# field name -> (min, max) raw value, from the app's own input checks
 NUDGEABLE = {
     "Throttle acceleration step": (2, 224),
 }
@@ -39,24 +42,30 @@ FORBIDDEN_ADDRS = {0xA0, 0x22, 0x23, 0x24}  # command register and save stamp
 
 
 def _field(name: str):
-    f = next(f for f in FIELDS if f.name == name)
-    assert f.bits == 16 and f.lo == 0, "only whole-word fields can be nudged"
-    return f
+    return next(f for f in FIELDS if f.name == name)
 
 
-def setting_frame(name: str, value: int) -> bytes:
-    """The app's single-setting address write: AA C6 addr addr lo hi crc16."""
+def new_word(name: str, raw: int, current_word: int) -> int:
+    """current_word with only this field's bits replaced by raw (checked against the app's range)."""
     if name not in NUDGEABLE:
         raise PermissionError(f"{name!r} is not nudgeable")
     f = _field(name)
     if risk(f) != "safe" or f.addr in FORBIDDEN_ADDRS:
         raise PermissionError(f"{name!r} is not a safe field")
     lo, hi = NUDGEABLE[name]
-    if not lo <= value <= hi:
-        raise ValueError(f"{value} outside the app's range {lo}..{hi}")
+    if not lo <= raw <= hi:
+        raise ValueError(f"{raw} outside the app's range {lo}..{hi}")
+    mask = ((1 << f.bits) - 1) << f.lo
+    return (current_word & ~mask & 0xFFFF) | (raw << f.lo)
+
+
+def setting_frame(name: str, raw: int, current_word: int = 0) -> bytes:
+    """The app's single-setting address write: AA C6 addr addr lo hi crc16."""
     from .crc import crc16_bytes
 
-    body = bytes([0xAA, 0xC6, f.addr, f.addr, value & 0xFF, value >> 8])
+    f = _field(name)
+    w = new_word(name, raw, current_word)
+    body = bytes([0xAA, 0xC6, f.addr, f.addr, w & 0xFF, w >> 8])
     return body + crc16_bytes(body)
 
 
@@ -67,9 +76,12 @@ def check_step(name: str, current: int, new: int, restore_value: int | None) -> 
         raise ValueError(f"{name}: {current} -> {new} is more than one step (use --restore-from to go back)")
 
 
-async def _write_and_verify(mac: str, name: str, value: int, log_dir: Path, timeout: float = 25.0) -> dict:
+async def _write_and_verify(
+    mac: str, name: str, raw: int, current_word: int, log_dir: Path, timeout: float = 25.0
+) -> dict:
     f = _field(name)
-    frame = setting_frame(name, value)
+    frame = setting_frame(name, raw, current_word)
+    target = new_word(name, raw, current_word)
     block = max(b for b in snap.PARAM_BLOCKS if b <= f.addr)  # the stream block holding this word
     seen_new = 0
     started = False
@@ -85,7 +97,7 @@ async def _write_and_verify(mac: str, name: str, value: int, log_dir: Path, time
             b = frame_block(fr)
             if b and b[0] == block:
                 started = True
-                if b[1][f.addr - block] == value and wrote:
+                if b[1][f.addr - block] == target and wrote:
                     seen_new += 1
 
         framer = Framer(on_frame=on_frame)
@@ -108,7 +120,7 @@ async def _write_and_verify(mac: str, name: str, value: int, log_dir: Path, time
                     await safe_write(client, HELLO, log)
                     next_hello = time.monotonic() + 1.0
                 if started and not wrote:
-                    log(f"TX {frame.hex()}  ({name} -> {value})")
+                    log(f"TX {frame.hex()}  ({name} -> raw {raw}, word {target:#06x})")
                     await client.write_gatt_char(CHAR, frame, response=False)
                     wrote = True
                 await asyncio.sleep(0.05)
@@ -198,21 +210,36 @@ async def _send_save(mac: str, log_dir: Path) -> dict:
 
 
 async def nudge(
-    mac: str, name: str, value: int, label: str, restore_from: str | None = None, save: bool = False
+    mac: str, name: str, value: int | None = None, label: str = "nudge",
+    restore_from: str | None = None, save: bool = False,
 ) -> dict:
-    restore_value = None
-    if restore_from:
-        restore_value = _field(name).value(snap.load(restore_from).words[_field(name).addr])
+    """Set one allowed field (raw units). value=None with restore_from puts back that snapshot's value."""
+    f = _field(name)
+    if name not in NUDGEABLE:
+        raise PermissionError(f"{name!r} is not nudgeable; allowed: {sorted(NUDGEABLE)}")
+    restore_value = f.raw(snap.load(restore_from).words[f.addr]) if restore_from else None
+    if value is None:
+        if restore_value is None:
+            raise ValueError("give a value or restore_from")
+        value = restore_value
     before = await snap.capture(mac)
-    current = _field(name).value(before.words[_field(name).addr])
+    word = before.words[f.addr]
+    current = f.raw(word)
+    if value == current:
+        return {"field": name, "unchanged": True, "value": current, "display": f.value(word), "unit": f.unit}
     check_step(name, current, value, restore_value)
+    target = new_word(name, value, word)
     bdir = snap.save(before, label=f"{label}-before")
-    result = await _write_and_verify(mac, name, value, snap.REPO / "captures" / f"{bdir.name}-write")
+    result = await _write_and_verify(mac, name, value, word, snap.REPO / "captures" / f"{bdir.name}-write")
     after = await snap.capture(mac)
     adir = snap.save(after, label=f"{label}-after")
-    out = {"field": name, "from": current, "to": value, **result, "before": bdir.name, "after": adir.name}
+    out = {
+        "field": name, "from": current, "to": value,
+        "display_from": f.value(word), "display_to": f.value(target), "unit": f.unit,
+        **result, "before": bdir.name, "after": adir.name,
+    }
     if save:
-        problems = presave_check(before, after, name, value)
+        problems = presave_check(before, after, name, f.value(target))
         if problems or not result["read_back_twice"]:
             out["save"] = {"refused": problems or ["new value was not read back"]}
             out["diff"] = snap.format_diff(snap.diff(before, after))
@@ -231,7 +258,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("mac")
     ap.add_argument("field")
-    ap.add_argument("value", type=int)
+    ap.add_argument("value", type=int, nargs="?", default=None)
     ap.add_argument("--label", default="nudge")
     ap.add_argument("--restore-from", default=None)
     ap.add_argument("--save", action="store_true", help="save to flash after a clean pre-save check")

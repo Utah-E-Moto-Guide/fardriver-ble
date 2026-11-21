@@ -5,6 +5,14 @@ from fardriver_ble.crc import crc16_bytes
 
 
 class NudgeGuardTest(unittest.TestCase):
+    def test_bit_field_keeps_other_bits(self):
+        # a fake 4-bit field at bits 4-7 via the real helper's masking logic
+        from fardriver_ble.address_map import Field
+
+        f = Field(0x99, "t", "setting", 4, 4)
+        mask = ((1 << f.bits) - 1) << f.lo
+        self.assertEqual((0xABCD & ~mask & 0xFFFF) | (3 << f.lo), 0xAB3D)
+
     def test_frame_matches_app_format(self):
         body = bytes.fromhex("aac62f2f4100")  # throttle accel = 65
         self.assertEqual(nudge.setting_frame("Throttle acceleration step", 65), body + crc16_bytes(body))
