@@ -178,3 +178,12 @@ Owner OK'd it. Allowlisted the app's `(19, 7, 10, 56)` = `AA 13 EC 07 0A 38 F2 0
   The app never interprets it; it only carries it in exports.
 - Snapshots now request it automatically and save a full `controller.heb`. First one:
   `snapshots/2026-11-21T211233Z_full-baseline` (19 bytes differ from Sep, all explained).
+
+## Power cycle check (2026-11-21)
+
+Owner power-cycled the bike. `after-power-cycle` vs `full-baseline`: **0xAB went 0x1434 -> 0**, confirming the
+PIN-check register is temporary (RAM) and today's PIN test left nothing behind. No setting changes, save count
+132 -> 132, second section identical; only live words and counters moved.
+
+Also fixed: the capture timeout counted the BLE connect (16-25 s at the bike), so a slow connect could starve
+the read. The timeout now starts after connecting; `stats.connect_seconds` records the connect time.

@@ -157,9 +157,11 @@ async def _capture_once(mac: str, timeout: float, keepalive: float) -> Snapshot:
             except Exception as e:  # noqa: BLE001
                 info[key] = f"<{type(e).__name__}>"
         await client.start_notify(CHAR, lambda _, d: col.feed(bytes(d)))
+        connected_s = time.monotonic() - t0
+        t_read = time.monotonic()  # the timeout covers reading, not the (slow) connect
         writes = requests = 0
         next_hello = 0.0
-        while not (col.done() and col.second_done()) and time.monotonic() - t0 < timeout:
+        while not (col.done() and col.second_done()) and time.monotonic() - t_read < timeout:
             if time.monotonic() >= next_hello:
                 if not col.second_done() and writes % 5 == 0:
                     await safe_write(client, REQUEST_SECOND_SECTION, lambda _: None)
@@ -185,6 +187,7 @@ async def _capture_once(mac: str, timeout: float, keepalive: float) -> Snapshot:
         second=col.second_words() if col.second_done() else [],
         stats={
             "seconds": round(time.monotonic() - t0, 1),
+            "connect_seconds": round(connected_s, 1),
             "second_section": "complete" if col.second_done() else f"missing {sum(i not in col.confirmed2 for i in SECOND_IDS)} frames",
             "hello_writes": writes,
             "second_section_requests": requests,
