@@ -12,14 +12,19 @@ logged session. The bike's safety and the owner's trust matter more than speed.
 
 1. `fardriver_scan` to find the controller (name contains CONTROL / YUANQU / BMS); use its MAC.
 2. Ask the bike's state if you don't know it: powered on, phone app closed (one BLE connection at a
-   time), and for any test that could move the wheel, on a stand and strapped down. Nothing in these
-   tools turns the motor; if a step ever needs the wheel to move, warn the owner first and let them
-   do the throttle.
+   time), and **on a stand with the driven wheel off the ground and the bike strapped down whenever
+   the tool is connected.** Neutral (0) may still drive the Apex while a Bluetooth dongle is connected
+   (reported by Utah E-Moto Guide, corroborated by MAXAPACITY), so never treat neutral as a lockout:
+   hands off the throttle, people clear. Nothing in these tools turns the motor; if a step ever needs
+   the wheel to move, warn the owner first and let them do the throttle.
+   After a save, power the bike fully off and back on and verify the value stuck before riding.
 3. Take a backup if there isn't a recent one: `fardriver_snapshot` (label it, e.g. `before-tune`).
 
 ## Knowledge, and how to speak about it
 
-- `tune_knowledge` (all, or one field) gives notes with a `source` and `confidence`.
+- `tune_knowledge` (all, or one field) gives notes with a `source` and `confidence`, plus `safety` notes.
+- Where sources disagree (e.g. which direction of throttle acceleration step is snappier: the manual
+  vs MAXAPACITY), say so and prefer what the owner has felt on this bike.
 - Name the source when you give advice: "the Fardriver manual says...", "you told me...",
   "my guess, untested...". Never present `reasoning` notes as fact.
 - First-hand riding facts come only from what the owner has said. Don't invent how a ride felt,

@@ -23,10 +23,14 @@ class KnowledgeTest(unittest.TestCase):
             self.assertEqual(tuple(e["raw_range"]), NUDGEABLE[e["field"]], e["field"])
 
     def test_every_note_is_sourced(self):
-        for e in self.k["settable"] + self.k["context"]:
-            for n in e["notes"]:
-                self.assertIn(n["source"], SOURCES, e["field"])
-                self.assertIn(n["confidence"], {"high", "medium", "low"}, e["field"])
+        notes = [(e["field"], n) for e in self.k["settable"] + self.k["context"] for n in e["notes"]]
+        notes += [("safety", n) for n in self.k.get("safety", [])]
+        for where, n in notes:
+            self.assertIn(n["source"], SOURCES, where)
+            self.assertIn(n["confidence"], {"high", "medium", "low"}, where)
+
+    def test_neutral_warning_present(self):
+        self.assertTrue(any("Neutral (0)" in n["text"] for n in self.k["safety"]))
 
 
 class AuditTest(unittest.TestCase):
