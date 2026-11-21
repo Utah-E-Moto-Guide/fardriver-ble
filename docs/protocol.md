@@ -154,3 +154,16 @@ controller it isn't bound to, it sends that PIN every other keep-alive: an addre
 packed two per byte) to 0xAB, then the hello. A PIN the user types goes to the same address. It is a PIN check,
 not an account. We have never sent it; everything so far used only the hello. It probably gates frames 56..87
 (the `.heb` second section), which was nearly empty (2 non-zero words) in the September file.
+
+## Default PIN entry test (2026-11-21)
+
+Owner OK'd entering (never changing) the default PIN. Allowlisted exactly `AA C6 AB AB 34 14 C7 E6`.
+- `before-pin` snapshot; run 4 (`captures/2026-11-21-run4-pin/`): 31 hellos + 15 PIN entries over 30 s,
+  956 frames, 0 bad CRC, ids 0..54 only. **Frames 56..87 still absent.**
+- PIN-status bits (0xE2 block, `(byte3 & 0x18) >> 3`) read 3 in run 3 (no PIN ever sent) and run 4 alike:
+  a controller with no custom PIN already counts as logged in.
+- `after-pin-2` vs `before-pin`: no setting changes, save count 132 -> 132, save timestamp unchanged.
+  Only 0xAB went 0 -> 0x1434: the PIN-check register echoing the entry. Expect it to clear on power cycle
+  (unverified). The Sep GDriver file had 0 there.
+- What the app sends when frames 56..87 are missing: command `(19, 7, 10, 56)`, a variant of the hello.
+  Not sent yet.
