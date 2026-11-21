@@ -112,3 +112,5 @@ Against a settings export from 2026-09-26 (owner's Dropbox, not committed):
 - Against the September settings export it shows exactly the owner's three changes.
 - Against this afternoon's run 3, words 0xDD, 0xE0, 0xF4, 0xF9 and 0x82 moved with no edits. All but 0x82 are in
   blocks the app's backup omits, so diffs now treat every word outside the `.heb` as runtime data.
+- 0x22..0x24 = last settings-save timestamp, bytes (yy,mon)(day,hour)(min,sec). Factory value 2026-05-23 11:22:37
+  matches the serial's `260523`; after the owner's September edits it reads 2026-09-27 07:15:32.
