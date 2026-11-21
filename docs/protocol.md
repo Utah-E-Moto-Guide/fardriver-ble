@@ -71,3 +71,21 @@ Deliberately not pursued: the app's forced owner-unbind flow and a hardcoded-key
   then one 18-byte payload repeated ~4/s: `18 f8 80 06 00 60 00 06 00 f8 98 00 98 98 06 00 60 fe`.
   No `0xAA` frames. Either the controller waits for the hello, or the adapter's UART speed doesn't match
   (the byte values look like baud-mismatch garbage). Next: send the hello only.
+- **2026-11-21 run 2** (`captures/2026-11-21-run2/`): bike on a stand, rear wheel up. Subscribed, then ONE hello
+  (`AA 13 EC 07 01 5F 10 EF`, the only write). Controller answered within ~0.1 s with `0xAA` frames, two frames per
+  32-byte notification. 300 frames, **0 bad CRC** (confirms framing and CRC on real hardware). Ids 0..54 only.
+  Stream lasted ~8 s, then fell back to the idle payload: the hello is also a keep-alive.
+  So the idle payload above is "no host", not a baud problem.
+- **2026-11-21 run 3** (`captures/2026-11-21-run3/`): hello re-sent every 1 s for 30 s (31 writes, nothing else).
+  Stream held the whole time: 1030 frames, 0 bad CRC, ids 0..54, no 56..87.
+  - Decoded with the id-to-address map (`fardriver_ble/decode.py`): 186 parameter words (31 blocks of 6) plus
+    the 0xE2/0xE8/0xEE telemetry blocks. 180 of 186 parameter words never changed; 145 are non-zero.
+  - Run 2 vs run 3 (separate connections): 179 of 186 words identical. Differ: 0xD8, 0xDA, 0xDC, 0xF5, 0xF6,
+    0xF8, 0xFB (counter/clock-like; 0xF5/0xF6 tick up).
+  - **No login was needed** to read this. The 56..87 image is still unseen; probably needs the default login.
+
+## Snapshot format (working)
+
+`{address: u16}` for the 31 non-telemetry blocks of the 0..54 cycle (addresses 0x00..0xFF with gaps
+0x36..0x5C, 0x6F..0x7B, 0xE2..0xF3). Volatile addresses listed above are recorded but excluded from diffs.
+Still to do: compare against a `.heb` exported by the phone app to prove nothing is missing.
