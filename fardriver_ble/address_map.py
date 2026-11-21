@@ -237,7 +237,7 @@ FIELDS: list[Field] = [
     # 0xB2 block: one-wire display protocol
     *[(_lo if i % 2 == 0 else _hi)(0xB4 + i // 2, f"One-wire sequence byte {i}", "setting") for i in range(8)],
     _w(0xB8, "One-wire field positions", "setting"),
-    _w(0xB9, "Save code (firmware recomputes it on every Save; formula unknown)", "unknown"),
+    _w(0xB9, "Settings checksum (firmware recomputes it on Save; same settings give the same value)", "identity"),
     _lo(0xBA, "One-wire pulse width", "setting"),
     _hi(0xBA, "One-wire pulse period", "setting"),
     _w(0xBB, "One-wire current coefficient", "setting"),
