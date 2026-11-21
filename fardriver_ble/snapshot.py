@@ -18,7 +18,7 @@ from pathlib import Path
 
 from bleak import BleakClient
 
-from . import names
+from . import address_map, names
 from .decode import FLASH_READ_ADDR, HEB_ADDRS, TELEMETRY_ADDRS, frame_block, heb_main_words
 from .listen import CHAR, DEVICE_INFO, Framer
 from .probe import HELLO, safe_write
@@ -86,7 +86,7 @@ class _Collector:
         self.last[addr] = w
         if prev is None:
             return
-        stable = all(p == x or (addr + i) in names.VOLATILE for i, (p, x) in enumerate(zip(prev, w)))
+        stable = all(p == x or (addr + i) in address_map.UNSTABLE_ADDRS for i, (p, x) in enumerate(zip(prev, w)))
         if stable:
             self.confirmed[addr] = w
         else:
@@ -183,36 +183,39 @@ def list_snapshots(root: Path = DEFAULT_DIR) -> list[dict]:
 
 
 def diff(old: Snapshot, new: Snapshot) -> dict:
-    """Changes grouped: settings first, then controller-maintained words."""
-    common = sorted(set(old.words) & set(new.words))
-    changes = [(a, old.words[a], new.words[a]) for a in common if old.words[a] != new.words[a]]
-
-    def row(a, o, n):
-        return {"addr": f"0x{a:02X}", "label": names.label(a), "old": o, "new": n}
-
-    # Words the app's own backup leaves out are runtime data, not settings.
-    maintained = names.VOLATILE | names.LIKELY_CONTROLLER_MAINTAINED | (set(common) - set(HEB_ADDRS))
+    """Field-level changes grouped by kind (settings first)."""
+    common = set(old.words) & set(new.words)
+    rows = address_map.field_changes({a: old.words[a] for a in common}, {a: new.words[a] for a in common})
+    groups = {k: [r for r in rows if r["kind"] == k] for k in address_map.KIND_ORDER}
     return {
         "old": {"taken_at": old.taken_at, "source": old.source, "serial": old.serial,
-                "saved": names.decode_save_time(old.words)},
+                "saved": names.decode_save_time(old.words), "save_count": old.words.get(0x05)},
         "new": {"taken_at": new.taken_at, "source": new.source, "serial": new.serial,
-                "saved": names.decode_save_time(new.words)},
+                "saved": names.decode_save_time(new.words), "save_count": new.words.get(0x05)},
         "compared_words": len(common),
         "same_controller": bool(old.serial) and old.serial == new.serial,
-        "setting_changes": [row(*c) for c in changes if c[0] not in maintained],
-        "controller_maintained_changes": [row(*c) for c in changes if c[0] in maintained],
+        "changes": groups,
     }
 
 
-def format_diff(d: dict) -> str:
+def format_diff(d: dict, show_live: bool = False) -> str:
+    o, n = d["old"], d["new"]
     lines = [
-        f"{d['old']['taken_at']} ({d['old']['source']})  ->  {d['new']['taken_at']} ({d['new']['source']})",
-        f"serial {d['old']['serial'] or '?'} -> {d['new']['serial'] or '?'}; {d['compared_words']} words compared",
-        f"settings last saved {d['old']['saved']} -> {d['new']['saved']}",
+        f"{o['taken_at']} ({o['source']})  ->  {n['taken_at']} ({n['source']})",
+        f"serial {o['serial'] or '?'} -> {n['serial'] or '?'}; {d['compared_words']} words compared",
+        f"settings last saved {o['saved']} -> {n['saved']}; save count {o['save_count']} -> {n['save_count']}",
     ]
-    for title, key in (("Setting changes", "setting_changes"), ("Controller-maintained", "controller_maintained_changes")):
-        rows = d[key]
-        lines.append(f"\n{title}: {len(rows) or 'none'}")
+    for kind in address_map.KIND_ORDER:
+        rows = d["changes"][kind]
+        if kind == "live" and not show_live:
+            lines.append(f"\n{address_map.KIND_TITLES[kind]}: {len(rows)} fields changed (hidden)")
+            continue
+        if kind == "stamp" and rows:
+            continue  # shown in the header
+        if not rows and kind not in ("setting", "unknown"):
+            continue
+        lines.append(f"\n{address_map.KIND_TITLES[kind]}: {len(rows) or 'none'}")
         for r in rows:
-            lines.append(f"  {r['addr']}  {r['old']:>6} -> {r['new']:<6}  {r['label']}")
+            unit = f" {r['unit']}" if r["unit"] else ""
+            lines.append(f"  {r['addr']}  {r['field']}: {r['old']} -> {r['new']}{unit}")
     return "\n".join(lines)

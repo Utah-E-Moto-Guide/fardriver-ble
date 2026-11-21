@@ -54,14 +54,18 @@ def fardriver_diff(old: str, new: str = "") -> str:
 
 
 @mcp.tool()
-def fardriver_show(name: str = "") -> str:
-    """Show a snapshot's named settings and serial (default: latest)."""
+def fardriver_show(name: str = "", kind: str = "setting") -> str:
+    """Decode a snapshot's fields (default: latest snapshot, settings only).
+
+    kind: setting, calibration, counter, stamp, identity, live, unknown, or all.
+    """
+    from .address_map import decode
+
     name = name or snap.list_snapshots()[-1]["name"]
     s = snap.load(name)
-    from .names import SETTINGS
-
-    rows = {f"{sec} / {n}": s.words.get(a) for a, (sec, n, _) in sorted(SETTINGS.items())}
-    return json.dumps({"snapshot": name, "taken_at": s.taken_at, "serial": s.serial, "settings": rows}, indent=2)
+    rows = [r for r in decode(s.words) if kind == "all" or r["kind"] == kind]
+    head = {"snapshot": name, "taken_at": s.taken_at, "serial": s.serial}
+    return json.dumps({**head, "fields": rows}, indent=1)
 
 
 if __name__ == "__main__":

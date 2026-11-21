@@ -124,3 +124,25 @@ changes and saves nothing, closes it, power-cycles the bike, then `after-gdriver
   (0xDC, 0xDD, 0xE0, 0xF4, 0xF5, 0xF6, 0xF8), all seen drifting earlier today; the power cycle covers them.
 - Conclusion: connecting and browsing with GDriver writes nothing to the settings we can read. Not covered: the
   unread 56..87 section, what GDriver does on Save, and anything it sends to its own servers.
+
+## Address map (2026-11-21)
+
+`fardriver_ble/address_map.py` is the field-level map: 280 fields over the 186 parameter words plus the
+runtime blocks, each with bits, scale, unit and a kind (setting / calibration / counter / stamp / identity /
+live / unknown). Built by reading where the official app displays each value (`tools/extract_field_map.py`
+pulls the raw assignments from a local decompile into `local/`), then checked against the GDriver XLSX:
+`tests/test_address_map.py` decodes the live baseline and matches 39 sheet values, including both curves
+and the 120/70-12 tire.
+
+Corrections this made to earlier guesses:
+- 0x05 is the **settings save count** (96 in Sep, the "96" in GDriver's file name; 132 now).
+- 0x1A packs throttle follow, **ECO mode**, field weakening, speed pulses and gear mode. Its Sep -> Nov change
+  is ECO mode 1 -> 2: a fourth setting change, not controller data.
+- 0x6D/0x81 odometer, 0x7D/0x7E work time, 0x82 live throttle voltage.
+- 0xD1 and 0xD3 mix a setting byte with a live byte (average power, average speed).
+- Regen curve: point i at i*500 RPM from 0, stored negative. Tire: 0xD2 lo aspect, 0xD2 hi rim, 0xD3 hi width;
+  0xD4/1000 = reduction ratio.
+
+Still unidentified in the app's backup: high bytes of 0x14, 0x2C, 0x65 (32), 0x9F; 0x67 (720), 0x68 (20257),
+0xA0 (1160), 0xAB, 0xAC..0xB3 (0xAD = 176, rest 0), 0xB9, plus a few config bits. The app never reads block
+0xAC or 0xB9.
