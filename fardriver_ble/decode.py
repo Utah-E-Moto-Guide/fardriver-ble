@@ -3,7 +3,7 @@
 Each frame id maps to a start address; the frame carries six little-endian u16
 words for that address and the next five. Ids that map to 0xE2/0xE8/0xEE repeat
 every 7 frames and carry live telemetry; the rest are parameter blocks.
-Map from jackhumbert/fardriver-controllers (MIT), matched to our capture.
+Map from jackhumbert/fardriver-controllers (MIT, see THIRD_PARTY_NOTICES.md), matched to our capture.
 """
 
 FLASH_READ_ADDR = (
