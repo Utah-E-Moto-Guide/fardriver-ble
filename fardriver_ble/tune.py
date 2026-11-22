@@ -1,4 +1,4 @@
-"""Garage-to-trail tuning sessions, guided by knowledge/settings.yml.
+"""Garage-to-trail tuning sessions, guided by the sourced knowledge files.
 
 Loop: start (goal + baseline snapshot) -> try one change -> ride -> feedback -> keep or revert.
 
@@ -9,30 +9,83 @@ Rules enforced here:
   trial value is still active, so a ride on the old setting is caught.
 - keep saves only when working memory differs from the last saved state in just that field.
 
-Sessions live in sessions/<id>/session.json and are committed with the repo.
+Sessions live in <data>/sessions/<id>/session.json (see paths.py).
+
+Knowledge is merged from three layers, in this order:
+  1. fardriver_ble/knowledge/settings.yml       shipped, generic Fardriver notes
+  2. fardriver_ble/knowledge/profiles/<name>.yml bike profiles turned on in <data>/config.yml
+                                                 (`profiles: [xpro-drax-apex]`) or FARDRIVER_PROFILE
+  3. <data>/knowledge.yml                        the rider's own notes (same format)
 """
 
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
 
 import yaml
 
+from . import paths
 from . import snapshot as snap
 from .address_map import FIELDS
 from .nudge import NUDGEABLE, _field, _send_save, nudge, presave_check
 
-REPO = snap.REPO
-KNOWLEDGE = REPO / "knowledge" / "settings.yml"
-SESSIONS = REPO / "sessions"
+SESSIONS = paths.SESSIONS
 
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+def _read_yaml(p: Path) -> dict:
+    return yaml.safe_load(p.read_text()) or {}
+
+
+def available_profiles() -> list[str]:
+    return sorted(p.stem for p in paths.PROFILES.glob("*.yml"))
+
+
+def active_profiles() -> list[str]:
+    env = os.environ.get("FARDRIVER_PROFILE")
+    if env is not None:
+        return [x.strip() for x in env.split(",") if x.strip()]
+    if paths.CONFIG.exists():
+        return list(_read_yaml(paths.CONFIG).get("profiles") or [])
+    return []
+
+
+def knowledge_layers() -> list[tuple[str, Path]]:
+    layers = [("shipped", paths.KNOWLEDGE)]
+    for name in active_profiles():
+        p = paths.PROFILES / f"{name}.yml"
+        if not p.exists():
+            raise RuntimeError(f"unknown bike profile {name!r}; available: {', '.join(available_profiles()) or 'none'}")
+        layers.append((f"profile:{name}", p))
+    if paths.LOCAL_KNOWLEDGE.exists():
+        layers.append(("yours", paths.LOCAL_KNOWLEDGE))
+    return layers
+
+
 def knowledge() -> dict:
-    return yaml.safe_load(KNOWLEDGE.read_text())
+    """All layers merged: notes for the same field are appended in layer order."""
+    out = {"layers": [], "settable": [], "context": [], "audit": [], "faults": [], "safety": []}
+    by_field: dict[str, dict] = {}
+    for label, path in knowledge_layers():
+        k = _read_yaml(path)
+        out["layers"].append(label)
+        for section in ("settable", "context"):
+            for e in k.get(section) or []:
+                entry = by_field.get(e["field"])
+                if entry is None:
+                    entry = {"field": e["field"], **({"plain": e["plain"]} if "plain" in e else {}), "notes": []}
+                    by_field[e["field"]] = entry
+                    out[section].append(entry)
+                elif "plain" in e and "plain" not in entry:
+                    entry["plain"] = e["plain"]
+                entry["notes"] += e.get("notes") or []
+        for section in ("audit", "faults", "safety"):
+            out[section] += k.get(section) or []
+    return out
 
 
 def knowledge_for(field: str) -> dict | None:
@@ -203,7 +256,7 @@ async def keep(mac: str) -> dict:
     problems = presave_check(snap.load(s["saved_ref"]), cur, t["field"], t["display_to"])
     if problems:
         return {"refused": problems}
-    res = await _send_save(mac, REPO / "captures" / f"tune-{s['id']}-keep-{t['n']}")
+    res = await _send_save(mac, paths.CAPTURES / f"tune-{s['id']}-keep-{t['n']}")
     saved = await snap.capture(mac)
     sdir = snap.save(saved, label=f"tune-{s['id']}-kept")
     t.update(saved=True, status="kept", kept_at=_now())

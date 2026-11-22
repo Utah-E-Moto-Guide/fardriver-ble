@@ -1,9 +1,10 @@
-"""MCP server: back up and compare Fardriver controller settings by asking an AI.
+"""MCP server: back up, compare and carefully tune Fardriver controller settings by asking an AI.
 
 Reads use only the allowlist in probe.py (hello/keep-alive, default PIN entry,
-second-section request). The one write tool, fardriver_set, goes through nudge.py:
-listed safe settings only, one step or back to a snapshot value, within the app's limits,
-optional Save after a pre-save check. No PIN-change, factory reset or other command exists.
+second-section request). Every write (fardriver_set and the tune_* tools) goes through nudge.py:
+listed settings only, one step or back to a snapshot value, within limits taken from this
+controller's factory reference, optional Save after a pre-save check. No PIN-change, factory reset
+or other command exists. Data (snapshots, sessions, captures) lives in paths.DATA.
 
 Run: .venv/bin/python -m fardriver_ble.mcp_server
 """
@@ -40,7 +41,13 @@ def refusals_as_text(fn):
 
 mcp = MCPServer(
     "fardriver",
-    instructions="Read-only backups of a Fardriver motor controller over Bluetooth. No tool changes settings.",
+    instructions=(
+        "Back up, compare and tune a Fardriver motor controller over Bluetooth. Snapshot tools only read. "
+        "fardriver_set and tune_try/keep/revert WRITE settings: one small step at a time, RAM-only unless "
+        "saved, never above the controller's factory currents. Before any write, confirm the bike is on a "
+        "stand with the driven wheel off the ground, strapped down, phone app closed, hands off the throttle. "
+        "Follow the fardriver-tune skill for tuning."
+    ),
 )
 
 
@@ -57,11 +64,14 @@ async def fardriver_snapshot(mac: str, label: str = "") -> str:
     """Read the controller's full settings over BLE and save a dated snapshot with a .heb backup.
 
     Read-only: sends only the app's hello/keep-alive and its second-section request.
-    Takes about 5-10 seconds after the (slow) connect.
+    Takes about 5-10 seconds after the (slow) connect. The first snapshot of a controller also
+    becomes its factory reference (the source of its current and RPM limits).
     """
     s = await snap.capture(mac)
     d = snap.save(s, label=label)
-    return json.dumps({"saved": d.name, "serial": s.serial, "words": len(s.words), **s.stats}, indent=2)
+    ref = snap.factory_reference(s.serial) if s.serial else None
+    return json.dumps({"saved": d.name, "serial": s.serial, "words": len(s.words), **s.stats,
+                       "factory_reference": ref.taken_at if ref else None}, indent=2)
 
 
 @mcp.tool()
@@ -79,7 +89,7 @@ def fardriver_diff(old: str, new: str = "") -> str:
     `new` defaults to the latest snapshot. Setting changes are listed apart from
     words the controller changes on its own.
     """
-    new = new or snap.list_snapshots()[-1]["name"]
+    new = new or snap.latest()
     return snap.format_diff(snap.diff(snap.load(old), snap.load(new)))
 
 
@@ -92,7 +102,7 @@ def fardriver_show(name: str = "", kind: str = "setting") -> str:
     """
     from .address_map import decode
 
-    name = name or snap.list_snapshots()[-1]["name"]
+    name = name or snap.latest()
     s = snap.load(name)
     rows = [r for r in decode(s.words) if kind == "all" or r["kind"] == kind]
     head = {"snapshot": name, "taken_at": s.taken_at, "serial": s.serial}
@@ -101,12 +111,26 @@ def fardriver_show(name: str = "", kind: str = "setting") -> str:
 
 @mcp.tool()
 @refusals_as_text
-def fardriver_settable() -> str:
+def fardriver_settable(serial: str = "") -> str:
     """Settings that can be changed: tier (comfort/caution/high), limits and max step in display units.
-    Everything else is refused. High-tier fields need acknowledge_risk=True. Sanity rules always apply."""
+
+    Limits for currents, RPM, boost time and the power curve come from the controller's factory
+    reference; `serial` picks the controller (default: the only one known). Everything else is
+    refused. High-tier fields need acknowledge_risk=True. Sanity rules always apply."""
     from . import policy
 
-    return json.dumps({"fields": policy.describe(), "rules": policy.__doc__.split("Hard rules")[1].strip()}, indent=1)
+    refs = snap.factory_references()
+    if not serial and len(refs) == 1:
+        serial = refs[0]["serial"]
+    ref = snap.factory_reference(serial) if serial else None
+    out = {"serial": serial or None, "factory_reference": next((r for r in refs if r["serial"] == serial), None)}
+    if ref is None:
+        out["note"] = ("No factory reference chosen, so currents, RPM, boost time and the power curve are not listed "
+                       "and cannot be changed. Take a snapshot first" + (f"; known controllers: {[r['serial'] for r in refs]}"
+                                                                         if refs else "") + ".")
+    out["fields"] = policy.describe(policy.factory_values(ref))
+    out["rules"] = policy.__doc__.split("Hard rules")[1].strip()
+    return json.dumps(out, indent=1)
 
 
 @mcp.tool()
@@ -122,7 +146,7 @@ async def fardriver_set(
     - save=False (default): the change lives in RAM only and a power cycle undoes it.
     - save=True: after a pre-save check (only this field differs from what's stored), sends the app's
       Save (timestamp + command 04). Permanent; bumps the save count.
-    Snapshots are taken before and after automatically. Ask the owner before save=True.
+    Snapshots are taken before and after automatically. Ask the rider before save=True.
     """
     from .nudge import nudge
 
@@ -133,7 +157,7 @@ async def fardriver_set(
 
 
 # --- guided tuning (garage-to-trail loop) ------------------------------------
-# Method lives in skills/fardriver-tune/SKILL.md. Knowledge in knowledge/settings.yml.
+# Method lives in skills/fardriver-tune/SKILL.md. Knowledge: see tune.py (shipped, bike profile, yours).
 
 
 @mcp.tool()
@@ -157,14 +181,14 @@ def tune_audit(snapshot: str = "") -> str:
     """Compare a snapshot (default: latest) with the manual's guidance. Flags are questions, not errors."""
     from . import tune
 
-    name = snapshot or snap.list_snapshots()[-1]["name"]
+    name = snapshot or snap.latest()
     return json.dumps({"snapshot": name, "flags": tune.audit(snap.load(name))}, indent=1)
 
 
 @mcp.tool()
 @refusals_as_text
 async def tune_start(mac: str, goal: str) -> str:
-    """Open a tuning session: records the owner's goal (their words) and takes a baseline snapshot."""
+    """Open a tuning session: records the rider's goal (their words) and takes a baseline snapshot."""
     from . import tune
 
     return json.dumps(await tune.start(mac, goal), indent=1)
@@ -176,10 +200,10 @@ async def tune_try(mac: str, field: str, value: float, save: bool = False, ackno
     """Try ONE change (display units, within the field's max step). RAM-only unless save=True.
 
     High-tier fields (currents, power curve) need acknowledge_risk=True, which you may only pass
-    after explaining the specific risk to the owner and hearing them accept it. The controller's
+    after explaining the specific risk to the rider and hearing them accept it. The controller's
     fault bits are watched after the write; a new fault puts the old value back automatically.
 
-    RAM-only changes vanish when the key goes off, so tell the owner to keep the bike on until the ride
+    RAM-only changes vanish when the key goes off, so tell the rider to keep the bike on until the ride
     is done, or ask whether to save the trial (reversible by tune_revert, which saves the old value back).
     """
     from . import tune
@@ -192,7 +216,7 @@ async def tune_try(mac: str, field: str, value: float, save: bool = False, ackno
 @mcp.tool()
 @refusals_as_text
 async def tune_feedback(mac: str, notes: str) -> str:
-    """Record how the open change felt, in the owner's words, and check it was still active."""
+    """Record how the open change felt, in the rider's words, and check it was still active."""
     from . import tune
 
     return json.dumps(await tune.feedback(mac, notes), indent=1)
@@ -201,7 +225,7 @@ async def tune_feedback(mac: str, notes: str) -> str:
 @mcp.tool()
 @refusals_as_text
 async def tune_keep(mac: str) -> str:
-    """Make the open change permanent (Save). Only after the owner explicitly says to keep it."""
+    """Make the open change permanent (Save). Only after the rider explicitly says to keep it."""
     from . import tune
 
     r = await tune.keep(mac)
@@ -245,5 +269,9 @@ def tune_history() -> str:
     return json.dumps(tune.history(), indent=1)
 
 
-if __name__ == "__main__":
+def main():
     mcp.run()
+
+
+if __name__ == "__main__":
+    main()

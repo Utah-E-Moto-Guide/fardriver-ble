@@ -1,7 +1,9 @@
 import unittest
 
-from fardriver_ble import nudge
+from fardriver_ble import nudge, policy
 from fardriver_ble.crc import crc16_bytes
+
+from . import SNAPSHOTS
 
 
 class NudgeGuardTest(unittest.TestCase):
@@ -30,7 +32,7 @@ class NudgeGuardTest(unittest.TestCase):
 
     def test_energy_feedback_only_off_or_brake_regen(self):
         name = "Energy feedback (0 follow, 1 off, 2 brake regen, 3 throttle-off regen)"
-        self.assertEqual(nudge.NUDGEABLE[name], (1, 2))
+        self.assertEqual(nudge.raw_range(name, policy.specs(None)), (1, 2))
         word = 0x2B09  # baseline 0x1A: feedback 1 (off), ECO 2, speed pulses 11, gear mode 1
         self.assertEqual(nudge.new_word(name, 2, word), 0x2B0A)  # other bits untouched
         for v in (0, 3):  # follow and throttle-off regen stay out of reach
@@ -65,8 +67,8 @@ class SaveGuardTest(unittest.TestCase):
     def test_presave_check_blocks_extra_changes(self):
         from fardriver_ble import snapshot as snap
 
-        ref = snap.load("2026-11-21T215001Z_accel-65-before")
-        ok = snap.load("2026-11-21T215134Z_accel-65-after")
+        ref = snap.load(SNAPSHOTS / "2026-11-21T215001Z_accel-65-before")
+        ok = snap.load(SNAPSHOTS / "2026-11-21T215134Z_accel-65-after")
         self.assertEqual(nudge.presave_check(ref, ok, "Throttle acceleration step", 65), [])
         bad = snap.Snapshot(ok.taken_at, "test", dict(ok.words), serial=ok.serial, second=list(ok.second))
         bad.words[0x1C] += 1  # battery capacity also differs: must refuse
