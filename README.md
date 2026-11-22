@@ -1,4 +1,4 @@
-# trailtune
+# <img src=".claude-plugin/icon.png" alt="" width="56" align="top"> trailtune
 
 [![tests](https://github.com/Utah-E-Moto-Guide/trailtune/actions/workflows/tests.yml/badge.svg)](https://github.com/Utah-E-Moto-Guide/trailtune/actions/workflows/tests.yml)
 

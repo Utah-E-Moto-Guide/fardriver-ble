@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>trailtune</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#24453a"/>
+      <stop offset="1" stop-color="#0f211b"/>
+    </linearGradient>
+    <clipPath id="tile"><rect width="1024" height="1024" rx="224"/></clipPath>
+  </defs>
+  <g clip-path="url(#tile)">
+    <rect width="1024" height="1024" fill="url(#bg)"/>
+    <line x1="181.2" y1="439.6" x2="136.1" y2="423.2" stroke="#e9e3d2" stroke-opacity="0.55" stroke-width="24" stroke-linecap="round"/>
+    <line x1="220.2" y1="363.2" x2="180.4" y2="336.3" stroke="#e9e3d2" stroke-opacity="0.55" stroke-width="24" stroke-linecap="round"/>
+    <line x1="276.5" y1="298.4" x2="244.3" y2="262.7" stroke="#e9e3d2" stroke-opacity="0.55" stroke-width="24" stroke-linecap="round"/>
+    <line x1="346.7" y1="249.2" x2="324.2" y2="206.8" stroke="#e9e3d2" stroke-opacity="0.55" stroke-width="24" stroke-linecap="round"/>
+    <line x1="426.8" y1="218.5" x2="415.2" y2="171.9" stroke="#e9e3d2" stroke-opacity="0.55" stroke-width="24" stroke-linecap="round"/>
+    <line x1="512.0" y1="208.0" x2="512.0" y2="160.0" stroke="#e9e3d2" stroke-opacity="0.55" stroke-width="24" stroke-linecap="round"/>
+    <line x1="597.2" y1="218.5" x2="608.8" y2="171.9" stroke="#e9e3d2" stroke-opacity="0.55" stroke-width="24" stroke-linecap="round"/>
+    <line x1="666.9" y1="268.6" x2="699.8" y2="206.8" stroke="#f6a23a" stroke-opacity="1" stroke-width="36" stroke-linecap="round"/>
+    <line x1="747.5" y1="298.4" x2="779.7" y2="262.7" stroke="#e9e3d2" stroke-opacity="0.55" stroke-width="24" stroke-linecap="round"/>
+    <line x1="803.8" y1="363.2" x2="843.6" y2="336.3" stroke="#e9e3d2" stroke-opacity="0.55" stroke-width="24" stroke-linecap="round"/>
+    <line x1="842.8" y1="439.6" x2="887.9" y2="423.2" stroke="#e9e3d2" stroke-opacity="0.55" stroke-width="24" stroke-linecap="round"/>
+    <!-- back ridge -->
+    <path d="M-20 900 L250 560 L380 690 L560 470 L760 640 L860 560 L1044 760 L1044 1044 L-20 1044 Z" fill="#3d6b58"/>
+    <!-- main peak -->
+    <path d="M90 1044 L512 330 L700 650 L790 560 L1000 1044 Z" fill="#e9e3d2"/>
+    <!-- snow line shading -->
+    <path d="M512 330 L700 650 L790 560 L1000 1044 L640 1044 Z" fill="#cfc7b1"/>
+    <!-- trail: switchbacks to the summit -->
+    <path d="M430 1010 L650 935 L400 865 L620 795 L440 730 L590 668 L470 612 L560 560 L495 512 L535 470 L516 418"
+          fill="none" stroke="#f28c28" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="516" cy="404" r="28" fill="#f6a23a"/>
+  </g>
+</svg>
