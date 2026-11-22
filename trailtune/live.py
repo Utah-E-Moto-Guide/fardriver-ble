@@ -9,8 +9,12 @@ Writes go only through probe.safe_write (the hello). Every notification is logge
 <data>/captures/<time>_live-<label>/ next to the decoded samples.
 
 Known words: 0xE3 fault bits (bit 15 = brake signal), 0xE5 motor speed (RPM), 0xE8 battery voltage
-(x0.1 V), 0xEA battery current (signed, probably A: + draw, - regen charging). The rest are recorded raw
-so they can be identified.
+(x0.1 V), 0xEA battery current (signed: + draw, - regen charging). The rest are recorded raw so they can
+be identified.
+
+Battery current comes out twice: `current` is the raw reading and `amps_est` is that times AMPS_PER_UNIT
+(about 0.25 A per unit, worked out from stand tests, not yet checked with a meter). Read `amps_est` as
+amps; keep `current` for comparing captures.
 """
 
 import asyncio
@@ -24,6 +28,11 @@ from . import address_map, paths
 from .decode import TELEMETRY_ADDRS, frame_block
 from .listen import CHAR, Framer
 from .probe import HELLO, safe_write
+
+# 0xEA scale, estimated 2026-11-22: the regen reading scaled with the setting (-9 at 2 A, -28 at 6 A,
+# ~4.5 units per set amp), and 6 units holding 2100 RPM free on the stand is ~120 W at 0.25 A/unit
+# (an implausible ~490 W at 1 A). See docs/protocol.md "Live telemetry and regen".
+AMPS_PER_UNIT = 0.25
 
 TELEMETRY_WORDS = tuple(a + i for a in sorted(TELEMETRY_ADDRS) for i in range(6))
 
@@ -62,10 +71,11 @@ def sample(words: dict[int, int]) -> dict:
     out = {
         "rpm": _signed(words[0xE5]) if 0xE5 in words else None,
         "volts": round(words[0xE8] * 0.1, 1) if 0xE8 in words else None,
-        "amps": _signed(words[0xEA]) if 0xEA in words else None,
+        "current": _signed(words[0xEA]) if 0xEA in words else None,
         "brake": address_map.brake_on(e3),
         "faults": [address_map.FAULTS.get(b, f"bit {b}") for b in range(16) if e3 & address_map.FAULT_MASK & (1 << b)],
     }
+    out["amps_est"] = None if out["current"] is None else round(out["current"] * AMPS_PER_UNIT, 2)
     out["raw"] = {f"0x{a:02X}": words[a] for a in TELEMETRY_WORDS if a in words}
     return out
 
@@ -81,18 +91,25 @@ def summarize(samples: list[dict], every: float = 1.0) -> dict:
     for s in samples:
         if next_t is None or s["t"] >= next_t:
             changing = {k: v for k, v in s["raw"].items() if ranges[k][0] != ranges[k][1]}
-            timeline.append({k: s[k] for k in ("t", "rpm", "volts", "amps", "brake", "faults")} | {"changing_raw": changing})
+            timeline.append({k: s[k] for k in ("t", "rpm", "volts", "current", "amps_est", "brake", "faults")} | {"changing_raw": changing})
             next_t = s["t"] + every
     rpms = [s["rpm"] for s in samples if s["rpm"] is not None]
     volts = [s["volts"] for s in samples if s["volts"] is not None]
-    amps = [s["amps"] for s in samples if s["amps"] is not None]
-    braking = [s["amps"] for s in samples if s["brake"] and s["amps"] is not None]
+    current = [s["current"] for s in samples if s["current"] is not None]
+    braking = [s["current"] for s in samples if s["brake"] and s["current"] is not None]
+
+    def span(xs, scale=1.0):
+        return [round(min(xs) * scale, 2), round(max(xs) * scale, 2)] if xs else None
+
     return {
         "samples": len(samples),
         "rpm_range": [min(rpms), max(rpms)] if rpms else None,
         "volts_range": [min(volts), max(volts)] if volts else None,
-        "amps_range": [min(amps), max(amps)] if amps else None,
-        "amps_while_braking": [min(braking), max(braking)] if braking else None,
+        "current_range": span(current),
+        "current_while_braking": span(braking),
+        "amps_est_range": span(current, AMPS_PER_UNIT),
+        "amps_est_while_braking": span(braking, AMPS_PER_UNIT),
+        "amps_per_unit": AMPS_PER_UNIT,
         "brake_seen": any(s["brake"] for s in samples),
         "faults_seen": sorted({f for s in samples for f in s["faults"]}),
         "raw_ranges": {k: v for k, v in ranges.items()},

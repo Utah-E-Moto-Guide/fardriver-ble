@@ -307,8 +307,9 @@ FIELDS: list[Field] = [
     _w(0xE8, "Battery voltage (live)", "live", 0.1, "V"),
     # 0xEA: battery current, signed. Stand test 2026-11-22 (captures/2026-11-22T182200Z_live-regen-brake):
     # +3..+68 while driving (voltage sagging with it), 0 coasting, -1..-9 on every brake pull with regen on
-    # (voltage rising 0.1-0.2 V). Units probably amps; not checked against a meter.
-    _w(0xEA, "Battery current (live, + draw / - charge)", "live", unit="A", signed=True),
+    # (voltage rising 0.1-0.2 V). Scale estimated at 0.25 A per unit (see live.AMPS_PER_UNIT); not checked
+    # against a meter.
+    _w(0xEA, "Battery current (live, estimated; + draw / - charge)", "live", 0.25, "A", signed=True),
     # 0xF4 / 0xFA blocks: runtime
     _w(0xF4, "Motor temperature", "live", unit="C", signed=True),
     _lo(0xF5, "Word 0xF5 low byte (scaled time?)", "live"),

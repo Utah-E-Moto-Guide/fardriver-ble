@@ -48,8 +48,9 @@ class LiveTest(unittest.TestCase):
 
 class CurrentTest(unittest.TestCase):
     def test_battery_current_is_signed(self):
-        self.assertEqual(live.sample({0xEA: 0xFFF7})["amps"], -9)
-        self.assertEqual(live.sample({0xEA: 68})["amps"], 68)
+        self.assertEqual(live.sample({0xEA: 0xFFF7})["current"], -9)
+        self.assertEqual(live.sample({0xEA: 68})["current"], 68)
+        self.assertEqual(live.sample({0xEA: 0xFFE4})["amps_est"], -7.0)
 
     def test_summary_reports_current_while_braking(self):
         samples = [
@@ -57,5 +58,6 @@ class CurrentTest(unittest.TestCase):
             {"t": 0.2, **live.sample({0xE3: 0x8000, 0xE5: 500, 0xE8: 816, 0xEA: 0xFFF7})},
         ]
         summ = live.summarize(samples)
-        self.assertEqual(summ["amps_range"], [-9, 7])
-        self.assertEqual(summ["amps_while_braking"], [-9, -9])
+        self.assertEqual(summ["current_range"], [-9, 7])
+        self.assertEqual(summ["current_while_braking"], [-9, -9])
+        self.assertEqual(summ["amps_est_while_braking"], [-2.25, -2.25])
