@@ -37,6 +37,10 @@ bike on a stand: `.venv/bin/python tools/test_tiers_live.py <MAC>`. pytest is co
 - `fardriver_ble/paths.py`: where rider data lives
 - `fardriver_ble/knowledge/`: shipped knowledge and bike profiles
 - `skills/fardriver-tune/`: the Claude Code skill
+- `.claude-plugin/plugin.json`, `marketplace.json`: the repo is its own Claude Code plugin and
+  marketplace; the MCP server is declared inline in `plugin.json` (a root `.mcp.json` would also load
+  as a project server for anyone working in a clone). Keep its `version` equal to `pyproject.toml`'s;
+  a test checks it. Bump both for each release so `claude plugin update` picks it up.
 - `tests/fixtures/`: snapshots and captures from one controller, used by the tests
 - `tools/unpack_xamarin_blob.py`, `extract_field_map.py`: pull data out of the app's APK (local use only)
 - `docs/protocol.md`: what we know about the protocol, and the live test log
