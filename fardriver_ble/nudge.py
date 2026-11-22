@@ -1,7 +1,9 @@
 """Change one allowed setting, the way the app does, and verify it.
 
 Guardrails (policy in policy.py):
-- Only fields in policy.SPECS, never a never-write field; limits and step sizes in display units.
+- Only fields in policy.TIER, never a never-write field; limits and step sizes in display units,
+  from policy.specs(this controller's factory values). Without a factory reference for the
+  connected controller, the controller-dependent fields (currents, RPM, boost, power curve) are refused.
 - The proposed state must pass policy.violations (factory current ceiling, gear order, regen order,
   power curve never rising, ...). High-tier fields (currents, power curve) need acknowledge_risk.
 - After every write the controller's fault bits (0xE3) are watched; a new fault makes the tool
@@ -35,17 +37,13 @@ from pathlib import Path
 from bleak import BleakClient
 
 from . import snapshot as snap
-from . import policy
+from . import paths, policy
 from .address_map import FAULT_MASK, FIELDS, brake_on, faults, risk
 from .decode import frame_block
 from .listen import CHAR, Framer
 from .probe import HELLO, safe_write
 
-# field name -> (min, max) RAW value, derived from the display-unit policy
-NUDGEABLE = {
-    n: tuple(sorted((policy.to_raw(n, s.lo), policy.to_raw(n, s.hi)))) for n, s in policy.SPECS.items()
-}
-REQUIRES_NONZERO = {n for n, s in policy.SPECS.items() if s.requires_nonzero}
+NUDGEABLE = frozenset(policy.TIER)  # every field that can ever be changed (limits depend on the controller)
 FORBIDDEN_ADDRS = {0xA0, 0x22, 0x23, 0x24}  # command register and save stamp
 
 
@@ -53,28 +51,38 @@ def _field(name: str):
     return next(f for f in FIELDS if f.name == name)
 
 
-def new_word(name: str, raw: int, current_word: int) -> int:
-    """current_word with only this field's bits replaced by raw (checked against the app's range)."""
+def raw_range(name: str, specs: dict) -> tuple[int, int]:
+    """(min, max) RAW value of a field under these limits."""
+    s = specs[name]
+    return tuple(sorted((policy.to_raw(name, s.lo), policy.to_raw(name, s.hi))))
+
+
+def new_word(name: str, raw: int, current_word: int, specs: dict | None = None) -> int:
+    """current_word with only this field's bits replaced by raw (checked against the limits in specs,
+    default: the controller-independent ones)."""
     if name not in NUDGEABLE:
         raise PermissionError(f"{name!r} is not nudgeable")
     f = _field(name)
     if risk(f) == "never" or f.addr in FORBIDDEN_ADDRS:
         raise PermissionError(f"{name!r} is a never-write field")
-    if name in REQUIRES_NONZERO and f.raw(current_word) == 0:
+    specs = policy.specs(None) if specs is None else specs
+    if name not in specs:
+        raise PermissionError(f"{name!r} needs this controller's factory reference (see `python -m fardriver_ble factory`)")
+    if specs[name].requires_nonzero and f.raw(current_word) == 0:
         raise PermissionError(f"{name!r} is 0 on this controller; the app does not write it then")
-    lo, hi = NUDGEABLE[name]
+    lo, hi = raw_range(name, specs)
     if not lo <= raw <= hi:
         raise ValueError(f"{raw} outside the app's range {lo}..{hi}")
     mask = ((1 << f.bits) - 1) << f.lo
     return (current_word & ~mask & 0xFFFF) | ((raw & ((1 << f.bits) - 1)) << f.lo)
 
 
-def setting_frame(name: str, raw: int, current_word: int = 0) -> bytes:
+def setting_frame(name: str, raw: int, current_word: int = 0, specs: dict | None = None) -> bytes:
     """The app's single-setting address write: AA C6 addr addr lo hi crc16."""
     from .crc import crc16_bytes
 
     f = _field(name)
-    w = new_word(name, raw, current_word)
+    w = new_word(name, raw, current_word, specs)
     body = bytes([0xAA, 0xC6, f.addr, f.addr, w & 0xFF, w >> 8])
     return body + crc16_bytes(body)
 
@@ -282,11 +290,10 @@ async def nudge(
 ) -> dict:
     """Set one allowed field. value is in DISPLAY units (A, RPM, %, s, ms); value=None with
     restore_from puts back that snapshot's value for this field."""
-    if name not in policy.SPECS:
+    if name not in policy.TIER:
         raise PermissionError(f"{name!r} is not changeable here; see fardriver_settable")
-    spec = policy.SPECS[name]
-    if spec.tier == "high" and not acknowledge_risk:
-        raise PermissionError(f"{name!r} is high risk: explain the risk to the owner, then pass acknowledge_risk=True")
+    if policy.TIER[name] == "high" and not acknowledge_risk:
+        raise PermissionError(f"{name!r} is high risk: explain the risk to the rider, then pass acknowledge_risk=True")
     f = _field(name)
     restore_display = f.value(snap.load(restore_from).words[f.addr]) if restore_from else None
     if value is None:
@@ -294,21 +301,28 @@ async def nudge(
             raise ValueError("give a value or restore_from")
         value = restore_display
     raw = policy.to_raw(name, value)
-    before = await snap.capture(mac)
+    before = await snap.capture(mac)  # records the factory reference if this controller is new
+    ref = snap.factory_reference(before.serial) if before.serial else None
+    factory = policy.factory_values(ref)
+    specs = policy.specs(factory)
+    if name not in specs:
+        raise PermissionError(f"{name!r} needs a factory reference for controller {before.serial or '(no serial)'}; "
+                              "see `python -m fardriver_ble factory`")
+    spec = specs[name]
     word = before.words[f.addr]
     current = f.value(word)
     if raw == f.raw(word):
         return {"field": name, "unchanged": True, "value": current, "unit": f.unit}
     check_step(name, current, policy.to_display(name, raw), restore_display, spec.max_step)
-    target = new_word(name, raw, word)
+    target = new_word(name, raw, word, specs)
     proposed = dict(before.words)
     proposed[f.addr] = target
-    bad = policy.violations(proposed)
+    bad = policy.violations(proposed, factory)
     if bad and value != restore_display:
         raise ValueError("refused by sanity rules: " + "; ".join(bad))
     bdir = snap.save(before, label=f"{label}-before")
     watch = 10.0 if spec.tier == "high" else 6.0
-    result = await _write_and_verify(mac, name, raw, word, snap.REPO / "captures" / f"{bdir.name}-write", watch=watch)
+    result = await _write_and_verify(mac, name, raw, word, paths.CAPTURES / f"{bdir.name}-write", watch=watch)
     after = await snap.capture(mac)
     adir = snap.save(after, label=f"{label}-after")
     out = {
@@ -321,7 +335,7 @@ async def nudge(
             out["save"] = {"refused": problems}
             out["diff"] = snap.format_diff(snap.diff(before, after))
             return out
-        out["save"] = await _send_save(mac, snap.REPO / "captures" / f"{adir.name}-save")
+        out["save"] = await _send_save(mac, paths.CAPTURES / f"{adir.name}-save")
         saved = await snap.capture(mac)
         sdir = snap.save(saved, label=f"{label}-saved")
         out["saved_snapshot"] = sdir.name

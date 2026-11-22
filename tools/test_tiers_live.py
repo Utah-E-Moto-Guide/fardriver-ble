@@ -10,17 +10,21 @@ import sys
 from fardriver_ble import snapshot as snap
 from fardriver_ble.nudge import nudge
 
-PLAN = [  # (field, new display value, acknowledge_risk)
-    ("Battery capacity", 36, False),
-    ("High gear line current", 125, True),
-    ("Power curve at 5000 RPM", 70, True),
+PLAN = [  # (field, step from the current display value, acknowledge_risk); every step lowers stress
+    ("Battery capacity", +1, False),
+    ("High gear line current", -5, True),
+    ("Power curve at 5000 RPM", -5, True),
 ]
 
 
 async def main(mac):
     start = await snap.capture(mac)
     sdir = snap.save(start, label="tiers-test-start")
-    for name, value, ack in PLAN:
+    from fardriver_ble.policy import NAMES
+
+    for name, step, ack in PLAN:
+        f = NAMES[name]
+        value = f.value(start.words[f.addr]) + step
         r1 = await nudge(mac, name, value, label="tiers-step", acknowledge_risk=ack)
         r2 = await nudge(mac, name, None, label="tiers-restore", restore_from=sdir.name, acknowledge_risk=ack)
         print(json.dumps({

@@ -4,6 +4,10 @@ Our own notes from reading the official Android app (decompiled locally, not kep
 here), the MIT-licensed [jackhumbert/fardriver-controllers](https://github.com/jackhumbert/fardriver-controllers)
 serial docs, and live tests against our controller. "Verified" means seen on the bike.
 
+The dated sections below are the development log from one bike (an X-Pro Drax Apex). Snapshot,
+capture and session names they mention are not in this repo, except those kept as test fixtures in
+`tests/fixtures/`.
+
 ## Source app
 
 - far-driver.com "The Controller APP For Android NEW 288", file `南京远驱288-Signed.Apk`, 64 MB,
@@ -266,7 +270,7 @@ no setting changes, save count 134 throughout.
 
 ## Tune tool (2026-11-21)
 
-`fardriver_ble/tune.py` + `tune_*` MCP tools + `skills/fardriver-tune`. Knowledge in `knowledge/settings.yml`
+`fardriver_ble/tune.py` + `tune_*` MCP tools + `skills/fardriver-tune`. Knowledge in `fardriver_ble/knowledge/settings.yml`
 (sourced notes; manual PDF facts in our own words). Manual corrections to the map: 0x9C AN = motor type
 constant (ours 16, IPM) and LM = motor matching (ours 22, manual default), both calibration/never.
 Audit against the manual flags: low-voltage cutoff 60 V (manual ~63 V for 72 V), regen max +100% over
