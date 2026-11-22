@@ -1,4 +1,4 @@
-"""Command line: python -m fardriver_ble {scan,snapshot,list,diff}"""
+"""Command line: python -m fardriver_ble {scan,snapshot,list,diff,factory}"""
 
 import argparse
 import asyncio
@@ -39,6 +39,10 @@ def main():
     s.add_argument("new", nargs="?", help="default: latest snapshot")
     s.add_argument("--json", action="store_true")
     s.add_argument("--dir", type=Path, default=snap.DEFAULT_DIR)
+    s = sub.add_parser("factory", help="show factory references, or set one from a stock snapshot or .heb")
+    s.add_argument("ref", nargs="?", help="snapshot name/dir or .heb file holding the controller's STOCK settings")
+    s.add_argument("--serial", help="serial to file it under (needed for a .heb, which carries no serial)")
+    s.add_argument("--dir", type=Path, default=snap.DEFAULT_DIR)
     a = ap.parse_args()
 
     if a.cmd == "scan":
@@ -49,8 +53,18 @@ def main():
         print(f"saved {d}\nserial {s.serial}  {json.dumps(s.stats)}")
     elif a.cmd == "list":
         print(json.dumps(snap.list_snapshots(a.dir), indent=2))
+    elif a.cmd == "factory":
+        if not a.ref:
+            print(json.dumps(snap.factory_references(), indent=2))
+            return
+        s = snap.load(a.ref, a.dir)
+        s.serial = a.serial or s.serial
+        p = snap.set_factory_reference(s, f"set by hand from {a.ref}")
+        from . import policy
+
+        print(f"factory reference for {s.serial}: {p}\n" + json.dumps(policy.factory_values(s), indent=2))
     elif a.cmd == "diff":
-        new = a.new or snap.list_snapshots(a.dir)[-1]["name"]
+        new = a.new or snap.latest(a.dir)
         d = snap.diff(snap.load(a.old, a.dir), snap.load(new, a.dir))
         print(json.dumps(d, indent=2) if a.json else snap.format_diff(d))
 

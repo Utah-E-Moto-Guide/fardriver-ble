@@ -9,6 +9,11 @@ That guards against a frame that passed CRC but caught a value mid-update.
 
 A complete snapshot saves `controller.heb`, the same 696-byte format the phone apps
 export (156 main words + 192 second-section words).
+
+Factory reference: the first snapshot ever read from a controller (by serial) is kept in
+<data>/factory/<serial>.json. The write tools take their current ceilings and RPM limits from it, so
+they fit whatever controller is connected. If the controller was already modified before its first
+snapshot, point the reference at a stock backup: `python -m fardriver_ble factory <snapshot or .heb>`.
 """
 
 import asyncio
@@ -22,15 +27,14 @@ from pathlib import Path
 
 from bleak import BleakClient
 
-from . import address_map, names
+from . import address_map, names, paths
 from .decode import FLASH_READ_ADDR, HEB_ADDRS, TELEMETRY_ADDRS, frame_block, heb_main_words
 from .listen import CHAR, DEVICE_INFO, Framer
 from .probe import HELLO, REQUEST_SECOND_SECTION, safe_write
 
 PARAM_BLOCKS = tuple(sorted(set(FLASH_READ_ADDR) - TELEMETRY_ADDRS))
 SECOND_IDS = range(56, 88)  # 32 frames x 6 words = 192 words
-REPO = Path(__file__).resolve().parent.parent
-DEFAULT_DIR = REPO / "snapshots"
+DEFAULT_DIR = paths.SNAPSHOTS
 
 
 @dataclass
@@ -137,7 +141,10 @@ async def capture(mac: str, timeout: float = 30.0, keepalive: float = 1.0, attem
     """Connect (retrying, weak signal is normal at the bike), then capture."""
     for attempt in range(1, attempts + 1):
         try:
-            return await _capture_once(mac, timeout, keepalive)
+            s = await _capture_once(mac, timeout, keepalive)
+            if s.serial and factory_reference(s.serial) is None:
+                set_factory_reference(s, "first snapshot read from this controller")
+            return s
         except (TimeoutError, asyncio.TimeoutError, OSError) as e:
             if attempt == attempts or "incomplete" in str(e):
                 raise
@@ -229,6 +236,47 @@ def list_snapshots(root: Path = DEFAULT_DIR) -> list[dict]:
     for d in sorted(Path(root).glob("*/snapshot.json")):
         s = Snapshot.from_json(d.read_text())
         out.append({"name": d.parent.name, "taken_at": s.taken_at, "serial": s.serial, "source": s.source})
+    return out
+
+
+def latest(root: Path = DEFAULT_DIR) -> str:
+    """Name of the newest snapshot."""
+    found = list_snapshots(root)
+    if not found:
+        raise RuntimeError(f"no snapshots yet in {root}; take one first (fardriver_snapshot)")
+    return found[-1]["name"]
+
+
+# --- factory reference -------------------------------------------------------
+
+def _factory_path(serial: str, root: Path | None = None) -> Path:
+    return Path(root or paths.FACTORY) / f"{serial}.json"
+
+
+def factory_reference(serial: str, root: Path | None = None) -> Snapshot | None:
+    """The stock settings of this controller (by serial), or None if none is recorded."""
+    p = _factory_path(serial, root)
+    if not p.exists():
+        return None
+    return Snapshot.from_json(json.dumps(json.loads(p.read_text())["snapshot"]))
+
+
+def set_factory_reference(s: Snapshot, source: str, root: Path | None = None) -> Path:
+    if not s.serial:
+        raise ValueError("snapshot has no serial; cannot tell which controller it belongs to")
+    p = _factory_path(s.serial, root)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    rec = {"serial": s.serial, "source": source, "set_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+           "snapshot_taken_at": s.taken_at, "snapshot": json.loads(s.to_json())}
+    p.write_text(json.dumps(rec, indent=1) + "\n")
+    return p
+
+
+def factory_references(root: Path | None = None) -> list[dict]:
+    out = []
+    for p in sorted(Path(root or paths.FACTORY).glob("*.json")):
+        rec = json.loads(p.read_text())
+        out.append({k: rec.get(k) for k in ("serial", "source", "set_at", "snapshot_taken_at")})
     return out
 
 

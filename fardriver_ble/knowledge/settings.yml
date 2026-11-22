@@ -1,19 +1,22 @@
-# Tuning knowledge for the Fardriver controller on the owner's X-Pro Drax Apex.
+# Tuning knowledge for Fardriver controllers (generic: true of any bike).
+#
+# Bike-specific notes live in profiles/<bike>.yml and are turned on per rider; the rider's own notes
+# live in <data>/knowledge.yml. All three use this format and are merged by tune.knowledge().
 #
 # Every claim carries a source:
 #   manual    Fardriver "adjustment instructions of the control parameters" PDF (far-driver.com)
 #   app       the official app's own labels, limits and code
 #   export   the settings export label
-#   owner     something the owner said (dated); first-hand only
-#   session   a logged tuning session result (added by the tune tool)
+#   owner     something the rider said (dated); first-hand only
+#   session   a logged tuning session result
 #   community forum / community notes; treat as claims, not facts.
-#             MAXAPACITY = the MAXAPACITY "DRAX Apex FarDriver tuning guide" (last updated 2026-11-21),
-#             built from Apex owners' app screenshots and ride reports.
+#             MAXAPACITY = the MAXAPACITY "DRAX Apex FarDriver tuning guide" (last updated 2026-11-21).
 #   reasoning our inference; lowest confidence, say so when using it
 # confidence: high | medium | low
 #
 # `settable` = comfort fields with full notes; limits, steps and tiers for every changeable field
-# live in fardriver_ble/policy.py. `context` = notes for other fields (some changeable, some not). Field names match fardriver_ble/address_map.py.
+# live in fardriver_ble/policy.py. `context` = notes for other fields (some changeable, some not).
+# Field names match fardriver_ble/address_map.py.
 
 settable:
   - field: Throttle acceleration step
@@ -21,69 +24,56 @@ settable:
     notes:
       - {source: manual, confidence: high, text: "Called acceleration sensitivity. 16..224; higher number = more sensitive. 16 is already very slow."}
       - {source: manual, confidence: high, text: "Electric cars ~32 and rarely above 64. E-motorcycles 32, many prefer 64 or 128 for quick response. Track racing up to 224."}
-      - {source: owner, confidence: high, text: "Factory value was 175; the owner set it to 64 (confirmed 2026-11-21)."}
-      - {source: community, confidence: medium, text: "MAXAPACITY lists factory 'Acc step 224' on the Apex dump they used; this owner's controller read 175 at the factory save stamp. Batch difference or a screenshot misread (the guide admits four such misreads)."}
-      - {source: owner, confidence: high, text: "The owner did not notice a change going 175 -> 64 (2026-11-21). They switched the profile Sport -> ECO around the same time."}
-      - {source: reasoning, confidence: low, text: "If the ECO profile ramps with the ECO acceleration coefficient (8, its maximum) instead of this step, the step may barely matter while in ECO. Unverified; test it in Sport to find out."}
-      - {source: community, confidence: low, text: "CONFLICT: MAXAPACITY says 'lower is snappier, harder on the drivetrain' (proposes 224 -> 200). The Fardriver manual says higher = more sensitive. Unresolved; the owner's own 175 -> 64 experience should settle it. Ask before advising a direction."}
-      - {source: owner, confidence: high, text: "On the Apex the limit on climbs is traction: the rear end spins out; the motor never runs out of pull (2026-11-08)."}
+      - {source: reasoning, confidence: low, text: "If the ECO profile ramps with the ECO acceleration coefficient instead of this step, the step may barely matter while in ECO. Unverified; test it in Sport to find out."}
+      - {source: community, confidence: low, text: "CONFLICT: MAXAPACITY says 'lower is snappier, harder on the drivetrain'. The Fardriver manual says higher = more sensitive. Unresolved; let the rider's own experience on their bike settle it. Ask before advising a direction."}
       - {source: reasoning, confidence: low, text: "A softer ramp makes it easier to feed power in without breaking the rear tire loose on loose climbs; too soft can feel laggy when you need a quick hop."}
   - field: Throttle deceleration step
     plain: How fast output drops when you close the throttle.
     notes:
       - {source: app, confidence: high, text: "App label 'Throttle Dec Step'; accepts 4..224."}
-      - {source: owner, confidence: high, text: "Factory 128; the owner set it to 64 (confirmed 2026-11-21)."}
-      - {source: community, confidence: medium, text: "MAXAPACITY's stock Apex dump also shows Dec step 128."}
       - {source: reasoning, confidence: low, text: "Lower should make roll-off gentler (less abrupt engine-brake-like change), higher makes the bike settle faster when you chop the throttle."}
   - field: Throttle release response
     plain: Response when the throttle is released (exact behaviour not documented).
     notes:
       - {source: app, confidence: high, text: "App field 'FreeThrottle', accepts 0..192."}
-      - {source: export, confidence: medium, text: "a third-party app calls it 'Throttle-release response'. Owner's value is 0."}
+      - {source: export, confidence: medium, text: "a third-party app calls it 'Throttle-release response'."}
       - {source: reasoning, confidence: low, text: "Meaning is uncertain; change only in small steps and describe the feel carefully."}
   - field: Acceleration curve update interval
     plain: How often the throttle ramp is updated. Shown in the app as (raw + 1) x 2 ms.
     notes:
-      - {source: app, confidence: high, text: "App field 'CurveTime', accepts raw 4..1000, displays (raw+1)*2 ms. Owner's raw 49 = 100 ms."}
+      - {source: app, confidence: high, text: "App field 'CurveTime', accepts raw 4..1000, displays (raw+1)*2 ms."}
       - {source: export, confidence: medium, text: "a third-party app: 'Acceleration-curve update interval'."}
       - {source: reasoning, confidence: low, text: "A longer interval probably stretches the ramp (smoother, slower); works together with the acceleration step."}
   - field: Throttle response profile (0 Line, 1 Sport, 2 ECO)
     plain: Overall throttle character. 0 = Line, 1 = Sport, 2 = ECO.
     notes:
       - {source: app, confidence: high, text: "App menu 'ThrottleResponse: 0-Line, 1-Sport, 2-ECO'."}
-      - {source: owner, confidence: high, text: "Was Sport (factory); the owner set ECO (confirmed 2026-11-21)."}
-      - {source: community, confidence: medium, text: "MAXAPACITY's stock Apex dump shows throttle response 1-Sport, matching this bike's factory value."}
       - {source: reasoning, confidence: low, text: "ECO probably applies the ECO acceleration coefficient; Line is likely a direct (linear) map. Unverified."}
   - field: ECO acceleration coefficient
     plain: Acceleration strength used in the ECO throttle profile, 1..8.
     notes:
       - {source: app, confidence: high, text: "App menu 'ECO Acc' 1..8; the app only writes it when it is already non-zero."}
-      - {source: owner, confidence: medium, text: "Reads 8 (the maximum) on the owner's controller, 2026-11-21."}
       - {source: reasoning, confidence: low, text: "Only matters while the profile is ECO."}
 
   - field: Energy feedback (0 follow, 1 off, 2 brake regen, 3 throttle-off regen)
     plain: Master switch for regen. 1 = off; 2 = regen only while the brake lever is pulled (EABS); 3 = regen when the throttle is released.
     notes:
-      - {source: app, confidence: high, text: "App 'Energy feedback' (FollowConfig, word 0x1A bits 0-1): 0 'Suitable follow mode', 1 'Energy feedback Disabled', 2 EABS (brake) mode, 3 throttle-release mode. Earlier mislabelled here as 'Throttle follow mode'."}
-      - {source: owner, confidence: high, text: "Reads 1 (regen off) on the owner's controller, 2026-11-21. The 2 A / 4 A regen currents and the regen curve are stored but unused while it is 1."}
-      - {source: app, confidence: high, text: "The app's presets also rewrite regen currents and the whole regen curve: EABS slightly = 6/20, medium 12/40, strong 24/80, curve -12/-25/-50%. This tool flips only the switch and keeps the bike's 2 A / 4 A."}
-      - {source: community, confidence: medium, text: "MAXAPACITY: Apex pack label 72V 35Ah, 10A max charge. Regen is charging current, so keep max regen at or below 10 A; the app's lightest preset (20) is above that."}
-      - {source: owner, confidence: high, text: "Owner rides the brakes on huge descents; wants brake regen (2026-11-21)."}
-      - {source: reasoning, confidence: medium, text: "Regen into a full pack can trip the BMS or the controller's over-voltage cut (90.7 V). Don't test it at the top of a long descent on a fresh 100% charge."}
-      - {source: reasoning, confidence: medium, text: "At 4 A max and ~80 V, regen is only ~300 W of braking: noticeable but light. It eases the mechanical brakes a little; it does not replace them."}
+      - {source: app, confidence: high, text: "App 'Energy feedback' (FollowConfig, word 0x1A bits 0-1): 0 'Suitable follow mode', 1 'Energy feedback Disabled', 2 EABS (brake) mode, 3 throttle-release mode."}
+      - {source: app, confidence: high, text: "The app's presets also rewrite regen currents and the whole regen curve: EABS slightly = 6/20, medium 12/40, strong 24/80, curve -12/-25/-50%. This tool flips only the switch and keeps the controller's own regen currents."}
+      - {source: reasoning, confidence: medium, text: "Regen is charging current. Keep max regen at or below the pack's rated charge current (on the pack label); the app's presets can exceed it."}
+      - {source: reasoning, confidence: medium, text: "Regen into a full pack can trip the BMS or the controller's over-voltage cut. Don't test it at the top of a long descent on a fresh 100% charge."}
+      - {source: reasoning, confidence: medium, text: "Regen power is roughly pack voltage x regen current: a few amps is a light drag that eases the mechanical brakes a little; it does not replace them."}
 
 context:
   - field: High gear phase current
     notes:
       - {source: manual, confidence: high, text: "Maximum phase current sets the torque from standstill to rated speed. Never set above the factory value: the controller is much more likely to burn out."}
-      - {source: community, confidence: medium, text: "MAXAPACITY: controller WC72V150AB_17_1ZHA80, case label 150A/405A; firmware ships 130A line / 350A phase (boost 360A). Owner reports: 140A/380A (all four currents together) ridden daily without faults by one owner; 145A/400A gave another owner Error 09, slow take-off and degraded gears 2-3, cleared by restoring stock. Not tunable in this tool."}
   - field: High gear line current
     notes:
       - {source: manual, confidence: high, text: "Maximum battery (bus) current; sets maximum power: input power = battery voltage x line current."}
   - field: Mid gear phase current ratio
     notes:
       - {source: manual, confidence: high, text: "Typical mid gear: phase 75% (starting push), line 50% (top speed) of the maximums. Low gear: phase 50%, line 25%."}
-      - {source: community, confidence: medium, text: "MAXAPACITY: Apex factory line ratios 60% low / 80% mid; they propose 70/90 as untested ('Experimental'). Their simple-mode gear speeds 35/23/15% match gear RPM / 12000 (4200, 2800, 1800)."}
   - field: Regen current (maximum)
     notes:
       - {source: manual, confidence: high, text: "Electronic braking uses 'stop reflux' (normal) current, limited by maximum reflux. Maximum is generally 25-50% larger than normal. E-brake must be enabled in the follow settings."}
@@ -99,7 +89,6 @@ context:
   - field: Power curve at 5000 RPM
     notes:
       - {source: manual, confidence: high, text: "The RPM current-limit curve controls field weakening (speed above rated). Start safe and raise gradually; unstable idle or MOE/OVER faults mean too much field weakening, so change it back."}
-      - {source: community, confidence: medium, text: "MAXAPACITY: the Apex curve is near-flat to 5000 RPM (75%) then drops to 1% at 5500 and 0% at 6000, which they think is the real top-end wall (not gear high speed). Experimental lever, not recommended."}
   - field: Motor matching LM (smoothness; manual default 22)
     notes:
       - {source: manual, confidence: high, text: "Default 22. Only lower it (16, 14, 12...) to cure low/mid-speed jitter; too low loses current control and can burn the controller. If lowering doesn't help, put it back to 22."}
@@ -111,8 +100,7 @@ context:
       - {source: manual, confidence: high, text: "PID values must not be changed casually; wrong values cause abnormal running or burn the controller. Medium-power default 4/8/12 KI, 40/80/120 KP."}
   - field: Battery capacity
     notes:
-      - {source: owner, confidence: high, text: "Factory 20 Ah; the owner set 35 (confirmed 2026-11-21). Used for the controller's state-of-charge estimate."}
-      - {source: community, confidence: medium, text: "MAXAPACITY: the Apex pack label reads 72V 35Ah (2,520 Wh), 150A max discharge, 10A max charge, while the controller ships at 20 Ah; they suspect it skews the fuel gauge."}
+      - {source: reasoning, confidence: medium, text: "Used for the controller's state-of-charge estimate. Set it to the pack's rated Ah; a wrong value gives a fuel gauge that lies."}
 
 # Audit rules: informational flags comparing settings with the manual. Not necessarily wrong.
 audit:
@@ -131,11 +119,10 @@ audit:
 
 faults:
   - {source: app, confidence: high, text: "The controller reports faults as bits in live word 0xE3 (17 codes, 0 = System OK). Code 9 is Phase Current Overflow Protect; 15 is MOE current protect."}
-  - {source: session, confidence: high, text: "Bit 15 of 0xE3 is the brake signal, not a fault: on the owner's bike it rose on each of 5 lever pulls and fell on release, with live word 0xEE bit 9 moving in step (brake test, 2026-11-22). The fault watch reports it and does not revert on it; a save is refused if it is still on at the end of the watch."}
-  - {source: session, confidence: medium, text: "First regen try (Energy feedback 1 -> 2, 2026-11-22): the controller accepted 2, then within ~0.5 s raised the brake signal with nobody on a lever. The old watch took the bit for a fault and wrote 1 back, so nothing was saved. One frame only: a mode-switch blip, or the controller reading the brake as held in regen mode (to be checked)."}
-  - {source: reasoning, confidence: medium, text: "The 'Error 09' MAXAPACITY's owner got at 145A/400A is most likely code 9, phase current overflow: the current asked for exceeded what the hardware could deliver."}
+  - {source: session, confidence: high, text: "Bit 15 of 0xE3 is the brake signal, not a fault: on a tested controller (WC72V150) it rose on every lever pull and fell on release, with live word 0xEE bit 9 moving in step. The fault watch reports it and does not revert on it; a save is refused if it is still on at the end of the watch."}
+  - {source: session, confidence: medium, text: "Switching Energy feedback to brake regen can blip the brake signal once right after the write, with nobody on a lever. If it stays on at rest, the controller reads the brake as held (no drive, constant regen): revert."}
 
 safety:
-  - {source: community, confidence: medium, text: "Neutral (0) may still drive the Apex while some Bluetooth dongles are connected: reported by Utah E-Moto Guide (2026-11-15) and corroborated by MAXAPACITY on the Apex and Engwe Eagle. Cause unverified. Never treat neutral as a throttle lockout while connected: driven wheel off the ground, bike secured, hands off the throttle, people clear."}
+  - {source: community, confidence: medium, text: "Neutral (0) may still drive the bike while some Bluetooth dongles are connected: reported by Utah E-Moto Guide (2026-11-15) and corroborated by MAXAPACITY on the X-Pro Drax Apex and Engwe Eagle. Cause unverified. Never treat neutral as a throttle lockout while connected: driven wheel off the ground, bike secured, hands off the throttle, people clear."}
   - {source: community, confidence: medium, text: "MAXAPACITY save procedure: save, power fully off, power on, reconnect, verify the values stuck. Power fully off before removing a dongle."}
-  - {source: community, confidence: medium, text: "MAXAPACITY stop signs: BMS cut-out, sag over ~8 V at WOT, motor temp near 160 C, controller above 85 C, hot connectors, abnormal noise or stutter, Error 09 or changed gear behaviour, settings not sticking after a power cycle."}
+  - {source: community, confidence: medium, text: "Stop signs (MAXAPACITY; temperature limits vary by motor and controller): BMS cut-out, large voltage sag at full throttle, motor or controller near its temperature limit, hot connectors, abnormal noise or stutter, any fault code or changed gear behaviour, settings not sticking after a power cycle."}
