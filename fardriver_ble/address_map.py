@@ -112,7 +112,7 @@ FIELDS: list[Field] = [
     # 0x18 block
     _w(0x18, "Motor rated speed", "setting", unit="RPM"),
     _w(0x19, "High gear line current", "setting", 0.25, "A"),
-    _bits(0x1A, 0, 2, "Throttle follow mode", "setting"),
+    _bits(0x1A, 0, 2, "Energy feedback (0 follow, 1 off, 2 brake regen, 3 throttle-off regen)", "setting"),  # app FollowConfig
     _bits(0x1A, 2, 2, "Throttle response profile (0 Line, 1 Sport, 2 ECO)", "setting"),
     _bits(0x1A, 4, 2, "Field weakening mode", "setting"),
     _bits(0x1A, 6, 2, "Config bits 6-7 (word 0x1A)", "setting"),
@@ -430,3 +430,15 @@ FAULTS = {
 def faults(word: int) -> list[str]:
     """Names of the fault bits set in word 0xE3; [] means the app would show 'System OK'."""
     return [name for bit, name in FAULTS.items() if word & (1 << bit)]
+
+
+# Bit 15 of 0xE3 is the brake signal, not a fault: on the owner's bike it goes high on every pull of
+# either lever and low on release, together with live word 0xEE bit 9 (brake test, 2026-11-22).
+# Every other bit of 0xE3 counts as a fault, named or not.
+BRAKE_BIT = 15
+FAULT_MASK = 0xFFFF & ~(1 << BRAKE_BIT)
+
+
+def brake_on(word: int) -> bool:
+    """True while the controller sees a brake lever pulled (word 0xE3 bit 15)."""
+    return bool(word & (1 << BRAKE_BIT))

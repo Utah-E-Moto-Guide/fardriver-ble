@@ -61,6 +61,17 @@ settable:
       - {source: owner, confidence: medium, text: "Reads 8 (the maximum) on the owner's controller, 2026-11-21."}
       - {source: reasoning, confidence: low, text: "Only matters while the profile is ECO."}
 
+  - field: Energy feedback (0 follow, 1 off, 2 brake regen, 3 throttle-off regen)
+    plain: Master switch for regen. 1 = off; 2 = regen only while the brake lever is pulled (EABS); 3 = regen when the throttle is released.
+    notes:
+      - {source: app, confidence: high, text: "App 'Energy feedback' (FollowConfig, word 0x1A bits 0-1): 0 'Suitable follow mode', 1 'Energy feedback Disabled', 2 EABS (brake) mode, 3 throttle-release mode. Earlier mislabelled here as 'Throttle follow mode'."}
+      - {source: owner, confidence: high, text: "Reads 1 (regen off) on the owner's controller, 2026-11-21. The 2 A / 4 A regen currents and the regen curve are stored but unused while it is 1."}
+      - {source: app, confidence: high, text: "The app's presets also rewrite regen currents and the whole regen curve: EABS slightly = 6/20, medium 12/40, strong 24/80, curve -12/-25/-50%. This tool flips only the switch and keeps the bike's 2 A / 4 A."}
+      - {source: community, confidence: medium, text: "MAXAPACITY: Apex pack label 72V 35Ah, 10A max charge. Regen is charging current, so keep max regen at or below 10 A; the app's lightest preset (20) is above that."}
+      - {source: owner, confidence: high, text: "Owner rides the brakes on huge descents; wants brake regen (2026-11-21)."}
+      - {source: reasoning, confidence: medium, text: "Regen into a full pack can trip the BMS or the controller's over-voltage cut (90.7 V). Don't test it at the top of a long descent on a fresh 100% charge."}
+      - {source: reasoning, confidence: medium, text: "At 4 A max and ~80 V, regen is only ~300 W of braking: noticeable but light. It eases the mechanical brakes a little; it does not replace them."}
+
 context:
   - field: High gear phase current
     notes:
@@ -120,6 +131,8 @@ audit:
 
 faults:
   - {source: app, confidence: high, text: "The controller reports faults as bits in live word 0xE3 (17 codes, 0 = System OK). Code 9 is Phase Current Overflow Protect; 15 is MOE current protect."}
+  - {source: session, confidence: high, text: "Bit 15 of 0xE3 is the brake signal, not a fault: on the owner's bike it rose on each of 5 lever pulls and fell on release, with live word 0xEE bit 9 moving in step (brake test, 2026-11-22). The fault watch reports it and does not revert on it; a save is refused if it is still on at the end of the watch."}
+  - {source: session, confidence: medium, text: "First regen try (Energy feedback 1 -> 2, 2026-11-22): the controller accepted 2, then within ~0.5 s raised the brake signal with nobody on a lever. The old watch took the bit for a fault and wrote 1 back, so nothing was saved. One frame only: a mode-switch blip, or the controller reading the brake as held in regen mode (to be checked)."}
   - {source: reasoning, confidence: medium, text: "The 'Error 09' MAXAPACITY's owner got at 145A/400A is most likely code 9, phase current overflow: the current asked for exceeded what the hardware could deliver."}
 
 safety:

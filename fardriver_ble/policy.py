@@ -60,6 +60,11 @@ SPECS: dict[str, Spec] = {
     "Boost duration": Spec("caution", 0, 20, 2),  # s; cap = 2x factory 10 s
     "Boost release delay": Spec("caution", 10, 120, 5),  # s
     # caution: regen
+    # Energy feedback switch (app "Energy feedback", FollowConfig): only 1 off <-> 2 brake regen (EABS).
+    # 0 "follow" (undocumented) and 3 throttle-off regen are left out on purpose: throttle-off regen acts
+    # like engine braking and can slide the rear on loose descents. Owner chose brake regen, 2026-11-21.
+    # The tool writes only this bit field, not the app preset's currents and curve.
+    "Energy feedback (0 follow, 1 off, 2 brake regen, 3 throttle-off regen)": Spec("caution", 1, 2, 1),
     "Regen current (normal)": Spec("caution", 0, 10, 1),  # app limit 10
     "Regen current (maximum)": Spec("caution", 0, 20, 2),  # app limit 20
     **{f"Regen curve at {r} RPM": Spec("caution", -30, 0, 5) for r in range(500, 9500, 500)},

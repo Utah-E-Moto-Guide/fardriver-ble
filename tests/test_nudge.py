@@ -28,6 +28,15 @@ class NudgeGuardTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 nudge.setting_frame("Throttle acceleration step", v)
 
+    def test_energy_feedback_only_off_or_brake_regen(self):
+        name = "Energy feedback (0 follow, 1 off, 2 brake regen, 3 throttle-off regen)"
+        self.assertEqual(nudge.NUDGEABLE[name], (1, 2))
+        word = 0x2B09  # baseline 0x1A: feedback 1 (off), ECO 2, speed pulses 11, gear mode 1
+        self.assertEqual(nudge.new_word(name, 2, word), 0x2B0A)  # other bits untouched
+        for v in (0, 3):  # follow and throttle-off regen stay out of reach
+            with self.assertRaises(ValueError):
+                nudge.new_word(name, v, word)
+
     def test_one_step_or_restore(self):
         nudge.check_step("x", 64, 65, None)
         nudge.check_step("x", 64, 63, None)
@@ -86,6 +95,24 @@ class AllowListTest(unittest.TestCase):
         with self.assertRaises(PermissionError):
             nudge.new_word("ECO acceleration coefficient", 2, 0x0100)  # bits 12-15 are 0
         self.assertEqual(nudge.new_word("ECO acceleration coefficient", 3, 0x2100), 0x3100)
+
+    def test_brake_bit_is_not_a_fault(self):
+        from fardriver_ble.address_map import FAULT_MASK, brake_on, faults
+
+        self.assertTrue(brake_on(0x8000))  # seen on every lever pull, brake test 2026-11-22
+        self.assertFalse(brake_on(0x0100))
+        self.assertEqual(0x8000 & FAULT_MASK, 0)  # not reverted on
+        for bit in range(15):  # every other bit still counts, named or not
+            self.assertTrue((1 << bit) & FAULT_MASK, bit)
+        self.assertEqual(faults(0x8100), ["9 Phase current overflow"])
+
+    def test_watch_problems_block_save(self):
+        clean = {"auto_reverted": None, "read_back_twice": True,
+                 "brake_signal": {"before_write": False, "on_at_end": False}}
+        self.assertEqual(nudge.watch_problems(clean), [])
+        self.assertTrue(nudge.watch_problems({**clean, "brake_signal": {"on_at_end": True}}))
+        self.assertTrue(nudge.watch_problems({**clean, "auto_reverted": []}))  # empty list still counts
+        self.assertTrue(nudge.watch_problems({**clean, "read_back_twice": False}))
 
 
 if __name__ == "__main__":
