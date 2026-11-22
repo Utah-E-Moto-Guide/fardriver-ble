@@ -1,4 +1,4 @@
-"""Command line: python -m fardriver_ble {scan,snapshot,list,diff,factory}"""
+"""Command line: python -m fardriver_ble {scan,snapshot,list,diff,factory,report}"""
 
 import argparse
 import asyncio
@@ -39,6 +39,10 @@ def main():
     s.add_argument("new", nargs="?", help="default: latest snapshot")
     s.add_argument("--json", action="store_true")
     s.add_argument("--dir", type=Path, default=snap.DEFAULT_DIR)
+    s = sub.add_parser("report", help="controller report for a GitHub issue (no serial or MAC)")
+    s.add_argument("source", nargs="?", help="MAC to read now, or a snapshot name/dir or .heb (default: latest)")
+    s.add_argument("--json", action="store_true")
+    s.add_argument("--dir", type=Path, default=snap.DEFAULT_DIR)
     s = sub.add_parser("factory", help="show factory references, or set one from a stock snapshot or .heb")
     s.add_argument("ref", nargs="?", help="snapshot name/dir or .heb file holding the controller's STOCK settings")
     s.add_argument("--serial", help="serial to file it under (needed for a .heb, which carries no serial)")
@@ -53,6 +57,13 @@ def main():
         print(f"saved {d}\nserial {s.serial}  {json.dumps(s.stats)}")
     elif a.cmd == "list":
         print(json.dumps(snap.list_snapshots(a.dir), indent=2))
+    elif a.cmd == "report":
+        from . import report
+
+        src = a.source or snap.latest(a.dir)
+        s = asyncio.run(snap.capture(src)) if report.is_address(src) else snap.load(src, a.dir)
+        r = report.build(s)
+        print(json.dumps(r, indent=2) if a.json else report.markdown(r))
     elif a.cmd == "factory":
         if not a.ref:
             print(json.dumps(snap.factory_references(), indent=2))

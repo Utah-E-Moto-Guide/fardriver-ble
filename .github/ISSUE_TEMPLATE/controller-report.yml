@@ -1,0 +1,40 @@
+name: Controller report
+description: Tell us how fardriver-ble worked with your controller, so its firmware can be verified.
+labels: [controller-report]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks! Reports like this are how new firmware gets onto the verified list.
+        Run `fardriver-ble report <MAC>` (or `fardriver-ble report` for your latest backup) and paste the output.
+        It has no serial number or Bluetooth address.
+  - type: textarea
+    id: report
+    attributes:
+      label: Report output
+      render: markdown
+    validations:
+      required: true
+  - type: input
+    id: bike
+    attributes:
+      label: Bike or vehicle
+      placeholder: e.g. X-Pro Drax Apex, Sur-Ron Light Bee X, custom build
+    validations:
+      required: true
+  - type: checkboxes
+    id: worked
+    attributes:
+      label: What did you try?
+      options:
+        - label: Scan found the controller
+        - label: Snapshot (backup) completed
+        - label: The .heb backup imports into the phone app
+        - label: A RAM-only change read back correctly (untested firmware opted in)
+        - label: Restoring that change worked
+        - label: Save + power cycle kept the value
+  - type: textarea
+    id: notes
+    attributes:
+      label: What happened
+      description: Anything odd, error messages, values that looked wrong in `fardriver_show`.
