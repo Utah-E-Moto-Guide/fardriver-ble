@@ -1,6 +1,9 @@
 {
   "name": "trailtune",
-  "owner": { "name": "Utah E-Moto Guide" },
+  "description": "trailtune: back up, compare and carefully tune Fardriver motor controllers from Claude Code.",
+  "owner": {
+    "name": "Utah E-Moto Guide"
+  },
   "plugins": [
     {
       "name": "trailtune",

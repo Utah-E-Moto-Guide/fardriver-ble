@@ -41,6 +41,8 @@ bike on a stand: `.venv/bin/python tools/test_tiers_live.py <MAC>`. pytest is co
   marketplace; the MCP server is declared inline in `plugin.json` (a root `.mcp.json` would also load
   as a project server for anyone working in a clone). Keep its `version` equal to `pyproject.toml`'s;
   a test checks it. Bump both for each release so `claude plugin update` picks it up.
+- `docs/icon.svg`: the icon's source; render `.claude-plugin/icon.png` from it with
+  `rsvg-convert -w 1024 -h 1024 docs/icon.svg -o .claude-plugin/icon.png`
 - `tests/fixtures/`: snapshots and captures from one controller, used by the tests
 - `tools/unpack_xamarin_blob.py`, `extract_field_map.py`: pull data out of the app's APK (local use only)
 - `docs/protocol.md`: what we know about the protocol, and the live test log
