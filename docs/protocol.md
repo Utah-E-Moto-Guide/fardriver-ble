@@ -96,12 +96,12 @@ Still to do: compare against a `.heb` exported by the phone app to prove nothing
 
 ## `.heb` layout (verified 2026-11-21)
 
-Against a settings export from 2026-09-26 (owner's Dropbox, not committed):
+Against a settings export from 2026-09-26 (not committed):
 - bytes 0..311 = 26 stream blocks (156 words) packed in address order: every non-telemetry block from 0x00
   to 0xD0 except 0x5D. See `HEB_BLOCKS` in `fardriver_ble/decode.py`.
 - Today's stream vs that file: 142/156 words identical; 14 differ, same in runs 2 and 3. Owner says 4-5 settings
   changed since September. Likely: 0x1C battery capacity 20 -> 35, 0x2F throttle acceleration 175 -> 64,
-  0x2B throttle deceleration 128 -> 64 (from neighbours in the settings export). Others unnamed:
+  0x2B throttle deceleration 128 -> 64 (from the export's labels). Others unnamed:
   0x05 (96 -> 132), 0x1A, 0x22..0x24 (look like packed bytes / timestamp), 0x6D, 0x7D, 0x82, 0xB9, 0xD1, 0xD3.
   **Owner confirmed (2026-11-21):** the three named changes cover their intentional edits. Treat the other 11
   as controller-maintained (counters, timestamps, learned calibration, status): back them up, but report them
@@ -113,33 +113,23 @@ Against a settings export from 2026-09-26 (owner's Dropbox, not committed):
 - Capture is complete when all 31 parameter blocks read twice in a row with equal values. First live baseline
   `snapshots/2026-11-21T202712Z_baseline`: 4 hellos, 62 block reads, 0 unstable, 0 bad CRC, about 4 s after a
   ~16 s connect (signal about -78 dBm at the bike). Serial `JSWX2C2605232776AC28` (ASCII at 0xA1..0xAA).
-- Against the September settings export it shows exactly the owner's three changes.
+- Against the September export it shows exactly the owner's three changes.
 - Against this afternoon's run 3, words 0xDD, 0xE0, 0xF4, 0xF9 and 0x82 moved with no edits. All but 0x82 are in
   blocks the app's backup omits, so diffs now treat every word outside the `.heb` as runtime data.
 - 0x22..0x24 = last settings-save timestamp, bytes (yy,mon)(day,hour)(min,sec). Factory value 2026-05-23 11:22:37
   matches the serial's `260523`; after the owner's September edits it reads 2026-09-27 07:15:32.
-
-## Third-party app audit (2026-11-21)
-
-Snapshots `before-export-1`, `before-export-2` (1 min apart, control), owner connects with a third-party app, browses,
-changes and saves nothing, closes it, power-cycles the bike, then `after-export`.
-- Control drift in 1 min: 0xF8 only.
-- before-2 -> after: **0 of 156 backed-up words changed; save timestamp unchanged.** Only runtime words moved
-  (0xDC, 0xDD, 0xE0, 0xF4, 0xF5, 0xF6, 0xF8), all seen drifting earlier today; the power cycle covers them.
-- Conclusion: connecting and browsing with a third-party app writes nothing to the settings we can read. Not covered: the
-  unread 56..87 section, what a third-party app does on Save, and anything it sends to its own servers.
 
 ## Address map (2026-11-21)
 
 `fardriver_ble/address_map.py` is the field-level map: 280 fields over the 186 parameter words plus the
 runtime blocks, each with bits, scale, unit and a kind (setting / calibration / counter / stamp / identity /
 live / unknown). Built by reading where the official app displays each value (`tools/extract_field_map.py`
-pulls the raw assignments from a local decompile into `local/`), then checked against the settings export:
-`tests/test_address_map.py` decodes the live baseline and matches 39 sheet values, including both curves
+pulls the raw assignments from a local decompile into `local/`), then checked against the September export:
+`tests/test_address_map.py` decodes the live baseline and matches 39 exported values, including both curves
 and the 120/70-12 tire.
 
 Corrections this made to earlier guesses:
-- 0x05 is the **settings save count** (96 in Sep, the "96" in the export's file name; 132 now).
+- 0x05 is the **settings save count** (96 in Sep, 132 now).
 - 0x1A packs energy feedback (regen switch, app FollowConfig; was mislabelled throttle follow), **ECO mode**, field weakening, speed pulses and gear mode. Its Sep -> Nov change
   is ECO mode 1 -> 2: a fourth setting change, not controller data. **Owner confirmed it was theirs (2026-11-21).**
 - 0x6D/0x81 odometer, 0x7D/0x7E work time, 0x82 live throttle voltage.
@@ -168,7 +158,7 @@ Owner OK'd entering (never changing) the default PIN. Allowlisted exactly `AA C6
   a controller with no custom PIN already counts as logged in.
 - `after-pin-2` vs `before-pin`: no setting changes, save count 132 -> 132, save timestamp unchanged.
   Only 0xAB went 0 -> 0x1434: the PIN-check register echoing the entry. Expect it to clear on power cycle
-  (unverified). The Sep settings export had 0 there.
+  (unverified). The September export had 0 there.
 - What the app sends when frames 56..87 are missing: command `(19, 7, 10, 56)`, a variant of the hello.
   Not sent yet.
 
@@ -178,7 +168,7 @@ Owner OK'd it. Allowlisted the app's `(19, 7, 10, 56)` = `AA 13 EC 07 0A 38 F2 0
 - `before-request56` snapshot; run 5 (`captures/2026-11-21-run5-request56/`): 31 hellos + 6 requests over 30 s,
   975 frames, 0 bad CRC, **all 32 frames 56..87 received**, each read consistently.
 - `after-request56`: no setting changes, save count 132 -> 132, timestamp unchanged.
-- The 192-word second section is identical to the September settings export (words 17 = 61440, 19 = 64, rest 0).
+- The 192-word second section is identical to the September export (words 17 = 61440, 19 = 64, rest 0).
   The app never interprets it; it only carries it in exports.
 - Snapshots now request it automatically and save a full `controller.heb`. First one:
   `snapshots/2026-11-21T211233Z_full-baseline` (19 bytes differ from Sep, all explained).
