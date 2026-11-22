@@ -2,7 +2,6 @@
 
 Default: Linux $XDG_DATA_HOME/trailtune (usually ~/.local/share/trailtune), macOS
 ~/Library/Application Support/trailtune, Windows %LOCALAPPDATA%\\trailtune.
-A data folder from before the rename (fardriver-ble) is still used if it is the only one.
 Override with TRAILTUNE_DATA, e.g. a private git repo of your own to keep the history.
 
     snapshots/       one folder per snapshot (snapshot.json + controller.heb)
@@ -28,8 +27,7 @@ def data_dir() -> Path:
         base = Path.home() / "Library" / "Application Support"
     else:
         base = os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share"
-    new, old = Path(base) / "trailtune", Path(base) / "fardriver-ble"  # the tool's name before 0.4
-    return old if old.exists() and not new.exists() else new
+    return Path(base) / "trailtune"
 
 
 DATA = data_dir()

@@ -95,7 +95,7 @@ class FactoryReferenceTest(unittest.TestCase):
 
         self.assertIn("trailtune-test-", str(paths.DATA))
 
-    def test_old_data_folder_still_used(self):
+    def test_default_data_folder(self):
         import os
         import tempfile as tf
         from unittest import mock
@@ -104,11 +104,7 @@ class FactoryReferenceTest(unittest.TestCase):
 
         with tf.TemporaryDirectory() as base, mock.patch.dict(os.environ, {"TRAILTUNE_DATA": "", "XDG_DATA_HOME": base}), \
                 mock.patch("sys.platform", "linux"):
-            self.assertEqual(paths.data_dir().name, "trailtune")  # neither exists: the new name
-            (Path(base) / "fardriver-ble").mkdir()
-            self.assertEqual(paths.data_dir().name, "fardriver-ble")  # only the old one: keep using it
-            (Path(base) / "trailtune").mkdir()
-            self.assertEqual(paths.data_dir().name, "trailtune")  # both: the new one wins
+            self.assertEqual(paths.data_dir(), Path(base) / "trailtune")
 
     def test_latest_explains_when_empty(self):
         with tempfile.TemporaryDirectory() as d, self.assertRaises(RuntimeError):
