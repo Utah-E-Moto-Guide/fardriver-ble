@@ -1,7 +1,7 @@
 import unittest
 
-from fardriver_ble import nudge, policy
-from fardriver_ble.crc import crc16_bytes
+from trailtune import nudge, policy
+from trailtune.crc import crc16_bytes
 
 from . import SNAPSHOTS
 
@@ -9,7 +9,7 @@ from . import SNAPSHOTS
 class NudgeGuardTest(unittest.TestCase):
     def test_bit_field_keeps_other_bits(self):
         # a fake 4-bit field at bits 4-7 via the real helper's masking logic
-        from fardriver_ble.address_map import Field
+        from trailtune.address_map import Field
 
         f = Field(0x99, "t", "setting", 4, 4)
         mask = ((1 << f.bits) - 1) << f.lo
@@ -65,7 +65,7 @@ class SaveGuardTest(unittest.TestCase):
         self.assertEqual(f[:10].hex(), "aaca22221a091b070f20")  # yy mm dd hh mi ss
 
     def test_presave_check_blocks_extra_changes(self):
-        from fardriver_ble import snapshot as snap
+        from trailtune import snapshot as snap
 
         ref = snap.load(SNAPSHOTS / "2026-11-21T215001Z_accel-65-before")
         ok = snap.load(SNAPSHOTS / "2026-11-21T215134Z_accel-65-after")
@@ -78,7 +78,7 @@ class SaveGuardTest(unittest.TestCase):
 
 class AllowListTest(unittest.TestCase):
     def test_no_allowed_field_is_never_write(self):
-        from fardriver_ble.address_map import risk
+        from trailtune.address_map import risk
 
         for name in nudge.NUDGEABLE:
             self.assertNotEqual(risk(nudge._field(name)), "never", name)
@@ -99,7 +99,7 @@ class AllowListTest(unittest.TestCase):
         self.assertEqual(nudge.new_word("ECO acceleration coefficient", 3, 0x2100), 0x3100)
 
     def test_brake_bit_is_not_a_fault(self):
-        from fardriver_ble.address_map import FAULT_MASK, brake_on, faults
+        from trailtune.address_map import FAULT_MASK, brake_on, faults
 
         self.assertTrue(brake_on(0x8000))  # seen on every lever pull, brake test 2026-11-22
         self.assertFalse(brake_on(0x0100))

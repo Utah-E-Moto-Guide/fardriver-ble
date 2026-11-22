@@ -1,10 +1,10 @@
 import unittest
 
-from fardriver_ble import snapshot as snap
+from trailtune import snapshot as snap
 
 from . import SNAPSHOTS
-from fardriver_ble.address_map import BY_ADDR, FIELDS, check_coverage, field_changes, risk
-from fardriver_ble.decode import FLASH_READ_ADDR, TELEMETRY_ADDRS
+from trailtune.address_map import BY_ADDR, FIELDS, check_coverage, field_changes, risk
+from trailtune.decode import FLASH_READ_ADDR, TELEMETRY_ADDRS
 
 BASELINE = "2026-11-21T202712Z_baseline"
 

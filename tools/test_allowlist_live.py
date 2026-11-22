@@ -8,9 +8,9 @@ import asyncio
 import json
 import sys
 
-from fardriver_ble import paths
-from fardriver_ble import snapshot as snap
-from fardriver_ble.nudge import NUDGEABLE, _field, nudge
+from trailtune import paths
+from trailtune import snapshot as snap
+from trailtune.nudge import NUDGEABLE, _field, nudge
 
 PLAN = {  # field -> step (+1/-1) chosen to stay inside the app's range
     "Throttle deceleration step": +1,

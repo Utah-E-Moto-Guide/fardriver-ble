@@ -21,7 +21,7 @@ def is_address(s: str) -> bool:
 
 def _version() -> str:
     try:
-        return version("fardriver-ble")
+        return version("trailtune")
     except PackageNotFoundError:
         return "unknown"
 
@@ -45,7 +45,7 @@ def build(s: "snap.Snapshot") -> dict:
 def markdown(r: dict) -> str:
     c = r["controller"]
     lines = [
-        "### fardriver-ble controller report",
+        "### trailtune controller report",
         "",
         f"- Firmware: **{r['firmware_key']}** ({'verified' if r['verified'] else 'not verified yet'})",
         f"- Model codes: custom `{c['custom_code']}`, special `{c['special_code']}`, rated {c['max_voltage']} V, "
@@ -54,7 +54,7 @@ def markdown(r: dict) -> str:
         "- Settings outside normal ranges: "
         + (", ".join(r["settings_outside_normal_ranges"]) if r["settings_outside_normal_ranges"] else "none"),
         "- Factory values used for limits: " + ", ".join(f"{k} {v}" for k, v in r["factory_values"].items()),
-        f"- fardriver-ble {r['tool']}, Python {r['python']}, {r['os']}",
+        f"- trailtune {r['tool']}, Python {r['python']}, {r['os']}",
         "",
         "(No serial number or Bluetooth address included.)",
     ]

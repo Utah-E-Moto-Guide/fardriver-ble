@@ -6,7 +6,7 @@ Allowed writes, and nothing else:
 - the app's request for the second settings section: command frame (19, 7, 10, 56)
 No settings, flash, PIN-change, binding or motor command can be sent.
 
-Usage: python -m fardriver_ble.probe <mac> <seconds> <outdir> [--repeat SECONDS]
+Usage: python -m trailtune.probe <mac> <seconds> <outdir> [--repeat SECONDS]
 """
 
 import argparse

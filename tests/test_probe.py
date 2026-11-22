@@ -1,7 +1,7 @@
 import asyncio
 import unittest
 
-from fardriver_ble import probe
+from trailtune import probe
 
 
 class FakeClient:
@@ -34,7 +34,7 @@ class ProbeAllowlistTest(unittest.TestCase):
 
     def test_pin_and_binding_commands_are_refused(self):
         # Password confirm/change (19, 10..13) and phone binding (19, 22..35) command frames.
-        from fardriver_ble.crc import command_frame
+        from trailtune.crc import command_frame
 
         client = FakeClient()
         for sub in [10, 11, 12, 13, *range(22, 27), *range(32, 36)]:

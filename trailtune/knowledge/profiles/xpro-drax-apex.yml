@@ -1,6 +1,6 @@
 # Bike profile: X-Pro Drax Apex (Fardriver WC72V150AB controller, 72 V 35 Ah pack).
 #
-# Turn on with `profiles: [xpro-drax-apex]` in <data>/config.yml, or FARDRIVER_PROFILE=xpro-drax-apex.
+# Turn on with `profiles: [xpro-drax-apex]` in <data>/config.yml, or TRAILTUNE_PROFILE=xpro-drax-apex.
 # Notes are merged after the generic knowledge (same format as ../settings.yml).
 # Most come from the MAXAPACITY "DRAX Apex FarDriver tuning guide" (last updated 2026-11-21), built
 # from Apex owners' app screenshots and ride reports: community claims, not facts.

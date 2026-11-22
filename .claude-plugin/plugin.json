@@ -1,12 +1,12 @@
 {
-  "name": "fardriver-ble",
-  "version": "0.3.0",
+  "name": "trailtune",
+  "version": "0.4.0",
   "description": "Back up, compare and carefully tune a Fardriver motor controller over Bluetooth: MCP tools plus a guided garage-to-trail tuning skill.",
   "author": {
     "name": "Utah E-Moto Guide"
   },
-  "homepage": "https://github.com/Utah-E-Moto-Guide/fardriver-ble",
-  "repository": "https://github.com/Utah-E-Moto-Guide/fardriver-ble",
+  "homepage": "https://github.com/Utah-E-Moto-Guide/trailtune",
+  "repository": "https://github.com/Utah-E-Moto-Guide/trailtune",
   "license": "MIT",
   "keywords": [
     "fardriver",
@@ -17,14 +17,14 @@
     "tuning"
   ],
   "mcpServers": {
-    "fardriver": {
+    "trailtune": {
       "command": "uv",
       "args": [
         "run",
         "--quiet",
         "--directory",
         "${CLAUDE_PLUGIN_ROOT}",
-        "fardriver-mcp"
+        "trailtune-mcp"
       ]
     }
   }

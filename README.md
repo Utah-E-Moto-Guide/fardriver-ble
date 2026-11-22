@@ -1,9 +1,10 @@
-# fardriver-ble
+# trailtune
 
-[![tests](https://github.com/Utah-E-Moto-Guide/fardriver-ble/actions/workflows/tests.yml/badge.svg)](https://github.com/Utah-E-Moto-Guide/fardriver-ble/actions/workflows/tests.yml)
+[![tests](https://github.com/Utah-E-Moto-Guide/trailtune/actions/workflows/tests.yml/badge.svg)](https://github.com/Utah-E-Moto-Guide/trailtune/actions/workflows/tests.yml)
 
 Back up, compare and carefully tune a **Fardriver motor controller** over Bluetooth from a laptop,
 by talking to Claude (or from the command line) instead of poking at the phone app.
+(Formerly `fardriver-ble`.)
 
 - **Back up** every setting to a dated snapshot plus a `.heb` file, the same format the phone apps
   export and import.
@@ -54,28 +55,28 @@ fetches Python 3.11+ and the dependencies by itself.
 At a Claude Code prompt:
 
 ```
-/plugin install fardriver-ble --marketplace Utah-E-Moto-Guide/fardriver-ble
+/plugin install trailtune --marketplace Utah-E-Moto-Guide/trailtune
 ```
 
-Answer `y` to add the marketplace, then pick a scope (user is usual). This installs the `fardriver`
-MCP tools and the `fardriver-tune` skill together. The first start takes a few seconds while uv sets
-up the environment. From a shell, the same is `claude plugin install fardriver-ble --marketplace
-Utah-E-Moto-Guide/fardriver-ble`. In the desktop app: + next to the prompt box, Plugins, Add
-marketplace `Utah-E-Moto-Guide/fardriver-ble`, then Add plugin.
+Answer `y` to add the marketplace, then pick a scope (user is usual). This installs the `trailtune`
+MCP tools and the `trailtune` skill together. The first start takes a few seconds while uv sets
+up the environment. From a shell, the same is `claude plugin install trailtune --marketplace
+Utah-E-Moto-Guide/trailtune`. In the desktop app: + next to the prompt box, Plugins, Add
+marketplace `Utah-E-Moto-Guide/trailtune`, then Add plugin.
 
 ### From a clone (for the command line, or to hack on it)
 
 ```sh
-git clone https://github.com/Utah-E-Moto-Guide/fardriver-ble
-cd fardriver-ble
+git clone https://github.com/Utah-E-Moto-Guide/trailtune
+cd trailtune
 uv venv .venv && uv pip install --python .venv/bin/python -e .
 ```
 
 To use a clone from Claude Code instead of the plugin, use one or the other, not both:
 
 ```sh
-claude mcp add -s user fardriver -- "$PWD/.venv/bin/python" -m fardriver_ble.mcp_server
-ln -s "$PWD/skills/fardriver-tune" ~/.claude/skills/fardriver-tune   # the guided tuning method
+claude mcp add -s user trailtune -- "$PWD/.venv/bin/python" -m trailtune.mcp_server
+ln -s "$PWD/skills/trailtune" ~/.claude/skills/trailtune   # the guided tuning method
 ```
 
 ### Use it
@@ -90,19 +91,19 @@ Then ask things like:
 ### Or from the command line (a clone)
 
 ```sh
-.venv/bin/fardriver-ble scan
-.venv/bin/fardriver-ble snapshot <MAC> --label before-tune
-.venv/bin/fardriver-ble list
-.venv/bin/fardriver-ble diff <old snapshot or .heb> [new]   # default new: the latest
-.venv/bin/fardriver-ble factory                             # show factory references
-.venv/bin/fardriver-ble report                              # controller report for an issue
+.venv/bin/trailtune scan
+.venv/bin/trailtune snapshot <MAC> --label before-tune
+.venv/bin/trailtune list
+.venv/bin/trailtune diff <old snapshot or .heb> [new]   # default new: the latest
+.venv/bin/trailtune factory                             # show factory references
+.venv/bin/trailtune report                              # controller report for an issue
 ```
 
 ## Your data
 
 Nothing personal is stored in the repo. Snapshots, write logs, tuning sessions and your notes go to
-a data folder: `~/.local/share/fardriver-ble` on Linux, `~/Library/Application Support/fardriver-ble`
-on macOS, `%LOCALAPPDATA%\fardriver-ble` on Windows. Set `FARDRIVER_DATA` to keep them somewhere
+a data folder: `~/.local/share/trailtune` on Linux, `~/Library/Application Support/trailtune`
+on macOS, `%LOCALAPPDATA%\trailtune` on Windows. Set `TRAILTUNE_DATA` to keep them somewhere
 else, for example a private git repo of your own:
 
 ```
@@ -125,13 +126,13 @@ point the reference at a stock backup, such as a `.heb` from the seller or anoth
 model:
 
 ```sh
-.venv/bin/fardriver-ble factory path/to/stock.heb --serial <your controller's serial>
+.venv/bin/trailtune factory path/to/stock.heb --serial <your controller's serial>
 ```
 
 ### Other controllers
 
 Writes are verified only on the firmware listed in
-[`fardriver_ble/knowledge/controllers.yml`](fardriver_ble/knowledge/controllers.yml). On anything
+[`trailtune/knowledge/controllers.yml`](trailtune/knowledge/controllers.yml). On anything
 else the tool still backs up, compares and audits, but refuses to change settings, because a
 different firmware may keep a setting at a different address and a write could land on the wrong
 one. To try writes anyway, at your own risk, add this to your data folder's `config.yml`:
@@ -142,7 +143,7 @@ allow_untested_firmware: true
 
 Even then, a write is refused if the controller's settings read outside their normal ranges, which
 is a strong sign its memory layout differs. If your controller works (or doesn't), please run
-`fardriver-ble report <MAC>` and open a [controller report](https://github.com/Utah-E-Moto-Guide/fardriver-ble/issues/new?template=controller-report.yml)
+`trailtune report <MAC>` and open a [controller report](https://github.com/Utah-E-Moto-Guide/trailtune/issues/new?template=controller-report.yml)
 so it can be added to the verified list.
 
 ### Bike profiles
@@ -155,7 +156,7 @@ profiles: [xpro-drax-apex]
 ```
 
 Available: `xpro-drax-apex`. Profiles for other bikes are welcome: copy the format of
-`fardriver_ble/knowledge/profiles/xpro-drax-apex.yml` and tag every note with its source.
+`trailtune/knowledge/profiles/xpro-drax-apex.yml` and tag every note with its source.
 
 ## How tuning works
 
@@ -176,7 +177,7 @@ needs your explicit yes every time, starts RAM-only, and can only go down from f
 - **Custom PINs.** The tool only enters the factory-default PIN (3414), as the app does. A controller
   with a custom PIN may refuse to answer; changing or removing the PIN is out of scope.
 - **macOS** identifies Bluetooth devices by a UUID instead of a MAC address. Use whatever
-  `fardriver-ble scan` prints.
+  `trailtune scan` prints.
 - **Weak signal is normal** at the bike: connecting can take 20-35 s.
 - **Verified on one firmware so far.** See [Other controllers](#other-controllers) and
   [CONTRIBUTING.md](CONTRIBUTING.md) to help add yours.

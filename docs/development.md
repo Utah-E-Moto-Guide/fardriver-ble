@@ -11,7 +11,7 @@
   hello/keep-alive, the default PIN entry, and the second-section request.
 - **One write path.** Setting writes and Save go only through `nudge.py`, under the limits in
   `policy.py`. Each new kind of write is added deliberately and logged in `docs/protocol.md`.
-- **No rider data in the repo.** Snapshots, captures and sessions go to `FARDRIVER_DATA`
+- **No rider data in the repo.** Snapshots, captures and sessions go to `TRAILTUNE_DATA`
   (`paths.py`). Tests run against a throwaway data folder and the fixtures in `tests/fixtures/`.
 
 ## Tests
@@ -25,18 +25,18 @@ bike on a stand: `.venv/bin/python tools/test_tiers_live.py <MAC>`. pytest is co
 
 ## Layout
 
-- `fardriver_ble/crc.py`: frame checksums
-- `fardriver_ble/listen.py`, `decode.py`: frame decoding
-- `fardriver_ble/probe.py`: the read-side allowlist (hello/keep-alive, PIN entry, second section)
-- `fardriver_ble/snapshot.py`: capture, save, load, diff, factory reference
-- `fardriver_ble/address_map.py`, `names.py`: what we know about each address
-- `fardriver_ble/policy.py`: tiers, limits and sanity rules
-- `fardriver_ble/nudge.py`: the only setting-write path (allow list, limits, fault watch, guarded Save)
-- `fardriver_ble/tune.py`: tuning sessions, knowledge layers and the manual-based audit
-- `fardriver_ble/mcp_server.py`: the MCP tools
-- `fardriver_ble/paths.py`: where rider data lives
-- `fardriver_ble/knowledge/`: shipped knowledge and bike profiles
-- `skills/fardriver-tune/`: the Claude Code skill
+- `trailtune/crc.py`: frame checksums
+- `trailtune/listen.py`, `decode.py`: frame decoding
+- `trailtune/probe.py`: the read-side allowlist (hello/keep-alive, PIN entry, second section)
+- `trailtune/snapshot.py`: capture, save, load, diff, factory reference
+- `trailtune/address_map.py`, `names.py`: what we know about each address
+- `trailtune/policy.py`: tiers, limits and sanity rules
+- `trailtune/nudge.py`: the only setting-write path (allow list, limits, fault watch, guarded Save)
+- `trailtune/tune.py`: tuning sessions, knowledge layers and the manual-based audit
+- `trailtune/mcp_server.py`: the MCP tools
+- `trailtune/paths.py`: where rider data lives
+- `trailtune/knowledge/`: shipped knowledge and bike profiles
+- `skills/trailtune/`: the Claude Code skill
 - `.claude-plugin/plugin.json`, `marketplace.json`: the repo is its own Claude Code plugin and
   marketplace; the MCP server is declared inline in `plugin.json` (a root `.mcp.json` would also load
   as a project server for anyone working in a clone). Keep its `version` equal to `pyproject.toml`'s;

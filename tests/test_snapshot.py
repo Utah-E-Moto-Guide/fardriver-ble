@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from fardriver_ble import snapshot as snap
+from trailtune import snapshot as snap
 
 from . import CAPTURES, SNAPSHOTS
 
@@ -91,9 +91,24 @@ class FactoryReferenceTest(unittest.TestCase):
             snap.set_factory_reference(s, "test", Path(d))
 
     def test_tests_use_a_throwaway_data_dir(self):
-        from fardriver_ble import paths
+        from trailtune import paths
 
-        self.assertIn("fardriver-test-", str(paths.DATA))
+        self.assertIn("trailtune-test-", str(paths.DATA))
+
+    def test_old_data_folder_still_used(self):
+        import os
+        import tempfile as tf
+        from unittest import mock
+
+        from trailtune import paths
+
+        with tf.TemporaryDirectory() as base, mock.patch.dict(os.environ, {"TRAILTUNE_DATA": "", "XDG_DATA_HOME": base}), \
+                mock.patch("sys.platform", "linux"):
+            self.assertEqual(paths.data_dir().name, "trailtune")  # neither exists: the new name
+            (Path(base) / "fardriver-ble").mkdir()
+            self.assertEqual(paths.data_dir().name, "fardriver-ble")  # only the old one: keep using it
+            (Path(base) / "trailtune").mkdir()
+            self.assertEqual(paths.data_dir().name, "trailtune")  # both: the new one wins
 
     def test_latest_explains_when_empty(self):
         with tempfile.TemporaryDirectory() as d, self.assertRaises(RuntimeError):

@@ -2,9 +2,9 @@
 
 ## jackhumbert/fardriver-controllers (MIT)
 
-`fardriver_ble/decode.py` uses the frame-id-to-address table (`FLASH_READ_ADDR`) published in
+`trailtune/decode.py` uses the frame-id-to-address table (`FLASH_READ_ADDR`) published in
 https://github.com/jackhumbert/fardriver-controllers. Several field names in
-`fardriver_ble/address_map.py` for blocks the official app never displays (0xA0 command register,
+`trailtune/address_map.py` for blocks the official app never displays (0xA0 command register,
 0xAC..0xB1 binding store, 0x0B bit layout, 0xF4..0xF9 runtime words) come from that project's notes,
 rewritten in our own words. The factory-reset frame used as a test vector in `tests/test_nudge.py`
 is documented there.
@@ -37,7 +37,7 @@ SOFTWARE.
   fault names were learned by reading a local decompile. No code, strings or binaries are in this repo
   (see `.gitignore`: `local/`, `*.apk`, `*.dll`).
 - Fardriver "adjustment instructions of the control parameters" PDF (far-driver.com): tuning guidance
-  paraphrased with attribution in `fardriver_ble/knowledge/settings.yml`. The PDF is not in this repo.
+  paraphrased with attribution in `trailtune/knowledge/settings.yml`. The PDF is not in this repo.
 - MAXAPACITY "DRAX Apex FarDriver tuning guide": credited for how to tune this particular bike
   (stock settings, owner results, safety practice). Community claims paraphrased with attribution in
-  `fardriver_ble/knowledge/profiles/xpro-drax-apex.yml` and the shipped safety notes, with a few short quoted phrases. Individual owners are not named.
+  `trailtune/knowledge/profiles/xpro-drax-apex.yml` and the shipped safety notes, with a few short quoted phrases. Individual owners are not named.

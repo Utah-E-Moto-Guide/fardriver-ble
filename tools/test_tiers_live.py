@@ -7,8 +7,8 @@ import asyncio
 import json
 import sys
 
-from fardriver_ble import snapshot as snap
-from fardriver_ble.nudge import nudge
+from trailtune import snapshot as snap
+from trailtune.nudge import nudge
 
 PLAN = [  # (field, step from the current display value, acknowledge_risk); every step lowers stress
     ("Battery capacity", +1, False),
@@ -20,7 +20,7 @@ PLAN = [  # (field, step from the current display value, acknowledge_risk); ever
 async def main(mac):
     start = await snap.capture(mac)
     sdir = snap.save(start, label="tiers-test-start")
-    from fardriver_ble.policy import NAMES
+    from trailtune.policy import NAMES
 
     for name, step, ack in PLAN:
         f = NAMES[name]
