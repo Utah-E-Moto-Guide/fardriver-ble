@@ -11,7 +11,7 @@ RUN3 = CAPTURES / "2026-11-21-run3/raw_notifications.txt"
 
 def replay(path: Path) -> snap._Collector:
     col = snap._Collector()
-    for line in open(path):
+    for line in open(path, encoding="utf-8"):
         parts = line.split()
         if len(parts) == 3 and parts[1] == "RX":
             col.feed(bytes.fromhex(parts[2]))

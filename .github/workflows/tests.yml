@@ -1,0 +1,25 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.11", "3.12", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Unit tests (no Bluetooth needed)
+        run: uv run --python ${{ matrix.python }} --with pytest pytest -q
+      - name: Package builds with its knowledge files
+        run: |
+          uv build --wheel -o dist
+          uv run --python ${{ matrix.python }} --no-project --with dist/*.whl python -I -c "from fardriver_ble import tune; assert tune.knowledge()['settable']"
+        shell: bash

@@ -39,7 +39,7 @@ async def main(mac):
     end = await snap.capture(mac)
     edir = snap.save(end, label="allowlist-test-end")
     print(snap.format_diff(snap.diff(start, end)))
-    (paths.CAPTURES / f"{sdir.name}-allowlist-results.json").write_text(json.dumps(results, indent=1))
+    (paths.CAPTURES / f"{sdir.name}-allowlist-results.json").write_text(json.dumps(results, indent=1), encoding="utf-8")
 
 
 asyncio.run(main(sys.argv[1]))

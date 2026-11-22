@@ -20,7 +20,7 @@ ARG = re.compile(r"arg\[(\d+)\]")
 
 
 def main(src, out):
-    lines = Path(src).read_text().splitlines()
+    lines = Path(src).read_text(encoding="utf-8").splitlines()
     rows = []
     for start, ln in enumerate(lines):
         sw = re.match(r"^(\t*)switch \((?:num\d*|b\d*|\w*FlashReadAddr\[\w+\])\)", ln)
@@ -48,7 +48,7 @@ def main(src, out):
                     "field": re.sub(r"^\w+Page\.", "", a[1]),
                     "expr": re.sub(r"\b\w+Page\.", "", a[2]),
                 })
-    Path(out).write_text(json.dumps(rows, indent=1))
+    Path(out).write_text(json.dumps(rows, indent=1), encoding="utf-8")
     print(f"{len(rows)} fields from {len({r['block'] for r in rows})} blocks -> {out}")
 
 

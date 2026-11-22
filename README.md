@@ -1,5 +1,7 @@
 # fardriver-ble
 
+[![tests](https://github.com/Utah-E-Moto-Guide/fardriver-ble/actions/workflows/tests.yml/badge.svg)](https://github.com/Utah-E-Moto-Guide/fardriver-ble/actions/workflows/tests.yml)
+
 Back up, compare and carefully tune a **Fardriver motor controller** over Bluetooth from a laptop,
 by talking to Claude (or from the command line) instead of poking at the phone app.
 
@@ -74,8 +76,9 @@ Then ask things like:
 ## Your data
 
 Nothing personal is stored in the repo. Snapshots, write logs, tuning sessions and your notes go to
-`~/.local/share/fardriver-ble` (or `$XDG_DATA_HOME/fardriver-ble`). Set `FARDRIVER_DATA` to keep
-them somewhere else, for example a private git repo of your own:
+a data folder: `~/.local/share/fardriver-ble` on Linux, `~/Library/Application Support/fardriver-ble`
+on macOS, `%LOCALAPPDATA%\fardriver-ble` on Windows. Set `FARDRIVER_DATA` to keep them somewhere
+else, for example a private git repo of your own:
 
 ```
 snapshots/      one folder per backup: snapshot.json + controller.heb
