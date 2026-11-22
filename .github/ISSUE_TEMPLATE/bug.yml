@@ -1,0 +1,21 @@
+name: Bug
+description: Something went wrong.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Controller report (if a controller is involved)
+      description: Output of `fardriver-ble report`. No serial or address in it.
+      render: markdown
+  - type: input
+    id: env
+    attributes:
+      label: OS and how you run it
+      placeholder: e.g. macOS 15, Claude Code plugin; Ubuntu 24.04, command line

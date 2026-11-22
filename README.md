@@ -76,6 +76,7 @@ Then ask things like:
 .venv/bin/fardriver-ble list
 .venv/bin/fardriver-ble diff <old snapshot or .heb> [new]   # default new: the latest
 .venv/bin/fardriver-ble factory                             # show factory references
+.venv/bin/fardriver-ble report                              # controller report for an issue
 ```
 
 ## Your data
@@ -121,8 +122,9 @@ allow_untested_firmware: true
 ```
 
 Even then, a write is refused if the controller's settings read outside their normal ranges, which
-is a strong sign its memory layout differs. If your controller works (or doesn't), please open an
-issue so it can be added to the verified list.
+is a strong sign its memory layout differs. If your controller works (or doesn't), please run
+`fardriver-ble report <MAC>` and open a [controller report](https://github.com/Utah-E-Moto-Guide/fardriver-ble/issues/new?template=controller-report.yml)
+so it can be added to the verified list.
 
 ### Bike profiles
 
@@ -148,6 +150,17 @@ Available: `xpro-drax-apex`. Profiles for other bikes are welcome: copy the form
 Settings come in three tiers. **Comfort** (throttle feel) gets normal care. **Caution** (gear speeds
 and ratios, boost, regen, battery gauge) gets an explanation first. **High** (currents, power curve)
 needs your explicit yes every time, starts RAM-only, and can only go down from factory.
+
+## Known limits
+
+- **One Bluetooth connection at a time.** Close the phone app, and any dongle's app, first.
+- **Custom PINs.** The tool only enters the factory-default PIN (3414), as the app does. A controller
+  with a custom PIN may refuse to answer; changing or removing the PIN is out of scope.
+- **macOS** identifies Bluetooth devices by a UUID instead of a MAC address. Use whatever
+  `fardriver-ble scan` prints.
+- **Weak signal is normal** at the bike: connecting can take 20-35 s.
+- **Verified on one firmware so far.** See [Other controllers](#other-controllers) and
+  [CONTRIBUTING.md](CONTRIBUTING.md) to help add yours.
 
 ## Credits
 

@@ -111,6 +111,16 @@ def fardriver_show(name: str = "", kind: str = "setting") -> str:
 
 @mcp.tool()
 @refusals_as_text
+def fardriver_report(snapshot: str = "") -> str:
+    """A controller report (Markdown) for a GitHub issue: firmware, whether it is verified, and
+    whether the settings read sensibly. Has no serial number or Bluetooth address. Default: latest snapshot."""
+    from . import report
+
+    return report.markdown(report.build(snap.load(snapshot or snap.latest())))
+
+
+@mcp.tool()
+@refusals_as_text
 def fardriver_settable(serial: str = "") -> str:
     """Settings that can be changed: tier (comfort/caution/high), limits and max step in display units.
 

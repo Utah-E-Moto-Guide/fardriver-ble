@@ -1,0 +1,19 @@
+name: Bike profile
+description: Suggest model-specific tuning notes for a bike (or open a PR adding a profile).
+labels: [bike-profile]
+body:
+  - type: input
+    id: bike
+    attributes:
+      label: Bike model
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: >-
+        Stock values, known limits, what owners found when tuning. Say where each claim comes from
+        (manual, your own riding, a forum post, a guide) and link the source if you can.
+    validations:
+      required: true
