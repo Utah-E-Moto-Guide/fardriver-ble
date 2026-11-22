@@ -1,12 +1,14 @@
 import unittest
 
 from fardriver_ble import snapshot as snap
+
+from . import SNAPSHOTS
 from fardriver_ble.address_map import BY_ADDR, FIELDS, check_coverage, field_changes, risk
 from fardriver_ble.decode import FLASH_READ_ADDR, TELEMETRY_ADDRS
 
 BASELINE = "2026-11-21T202712Z_baseline"
 
-# Values from the owner's settings export (2026-09-26) for settings they did not change.
+# Values from the fixture bike's settings export (2026-09-26) for settings they did not change.
 SHEET = {
     "High gear line current": 130, "High gear phase current": 350,
     "Boost line current": 130, "Boost phase current": 360,
@@ -32,7 +34,7 @@ SHEET = {
 class AddressMapTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.words = snap.load(BASELINE).words
+        cls.words = snap.load(SNAPSHOTS / BASELINE).words
 
     def value(self, name):
         f = next(f for f in FIELDS if f.name == name)

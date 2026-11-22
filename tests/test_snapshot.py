@@ -4,8 +4,9 @@ from pathlib import Path
 
 from fardriver_ble import snapshot as snap
 
-REPO = Path(__file__).resolve().parent.parent
-RUN3 = REPO / "captures/2026-11-21-run3/raw_notifications.txt"
+from . import CAPTURES, SNAPSHOTS
+
+RUN3 = CAPTURES / "2026-11-21-run3/raw_notifications.txt"
 
 
 def replay(path: Path) -> snap._Collector:
@@ -59,7 +60,7 @@ class SnapshotRoundTripTest(unittest.TestCase):
 
 class SecondSectionTest(unittest.TestCase):
     def test_run5_replay_reads_second_section(self):
-        col = replay(REPO / "captures/2026-11-21-run5-request56/raw_notifications.txt")
+        col = replay(CAPTURES / "2026-11-21-run5-request56/raw_notifications.txt")
         self.assertTrue(col.done())
         self.assertTrue(col.second_done())
         second = col.second_words()
@@ -71,6 +72,32 @@ class SecondSectionTest(unittest.TestCase):
         heb = s.heb()
         self.assertEqual(len(heb), 696)
         self.assertEqual(snap.Snapshot.from_json(s.to_json()).heb(), heb)
+
+
+class FactoryReferenceTest(unittest.TestCase):
+    def test_set_and_load_by_serial(self):
+        s = snap.load(SNAPSHOTS / "2026-11-21T211233Z_full-baseline")
+        with tempfile.TemporaryDirectory() as d:
+            self.assertIsNone(snap.factory_reference(s.serial, Path(d)))
+            snap.set_factory_reference(s, "test", Path(d))
+            back = snap.factory_reference(s.serial, Path(d))
+            self.assertEqual(back.words, s.words)
+            self.assertEqual(snap.factory_references(Path(d))[0]["serial"], s.serial)
+
+    def test_no_serial_refused(self):
+        s = snap.load(SNAPSHOTS / "2026-11-21T211233Z_full-baseline")
+        s.serial = ""
+        with tempfile.TemporaryDirectory() as d, self.assertRaises(ValueError):
+            snap.set_factory_reference(s, "test", Path(d))
+
+    def test_tests_use_a_throwaway_data_dir(self):
+        from fardriver_ble import paths
+
+        self.assertIn("fardriver-test-", str(paths.DATA))
+
+    def test_latest_explains_when_empty(self):
+        with tempfile.TemporaryDirectory() as d, self.assertRaises(RuntimeError):
+            snap.latest(Path(d))
 
 
 if __name__ == "__main__":

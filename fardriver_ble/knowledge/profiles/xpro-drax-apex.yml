@@ -1,0 +1,40 @@
+# Bike profile: X-Pro Drax Apex (Fardriver WC72V150AB controller, 72 V 35 Ah pack).
+#
+# Turn on with `profiles: [xpro-drax-apex]` in <data>/config.yml, or FARDRIVER_PROFILE=xpro-drax-apex.
+# Notes are merged after the generic knowledge (same format as ../settings.yml).
+# Most come from the MAXAPACITY "DRAX Apex FarDriver tuning guide" (last updated 2026-11-21), built
+# from Apex owners' app screenshots and ride reports: community claims, not facts.
+
+settable:
+  - field: Throttle acceleration step
+    notes:
+      - {source: community, confidence: medium, text: "MAXAPACITY lists factory 'Acc step 224' on the Apex dump they used; another Apex read 175 at its factory save stamp. Batch difference or a screenshot misread (the guide admits four such misreads). MAXAPACITY proposes 224 -> 200."}
+  - field: Throttle deceleration step
+    notes:
+      - {source: community, confidence: medium, text: "MAXAPACITY's stock Apex dump shows Dec step 128."}
+  - field: Throttle response profile (0 Line, 1 Sport, 2 ECO)
+    notes:
+      - {source: community, confidence: medium, text: "MAXAPACITY's stock Apex dump shows throttle response 1-Sport."}
+  - field: Energy feedback (0 follow, 1 off, 2 brake regen, 3 throttle-off regen)
+    notes:
+      - {source: community, confidence: medium, text: "MAXAPACITY: Apex pack label 72V 35Ah, 10A max charge. Keep max regen at or below 10 A; the app's lightest preset (20) is above that."}
+      - {source: session, confidence: high, text: "One Apex read at its factory save stamp (2026-11-21): regen currents 2 A normal / 4 A max, Energy feedback 1 (off). At ~80 V that is only ~150-300 W of braking once switched on."}
+      - {source: reasoning, confidence: medium, text: "The Apex controller's over-voltage cut is 90.7 V; regen on a full pack can reach it."}
+
+context:
+  - field: High gear phase current
+    notes:
+      - {source: community, confidence: medium, text: "MAXAPACITY: controller WC72V150AB_17_1ZHA80, case label 150A/405A; firmware ships 130A line / 350A phase (boost 360A). Owner reports: 140A/380A (all four currents together) ridden daily without faults by one owner; 145A/400A gave another owner Error 09, slow take-off and degraded gears 2-3, cleared by restoring stock. Above factory is not allowed by this tool."}
+      - {source: reasoning, confidence: medium, text: "The 'Error 09' at 145A/400A is most likely code 9, phase current overflow: the current asked for exceeded what the hardware could deliver."}
+  - field: Mid gear phase current ratio
+    notes:
+      - {source: community, confidence: medium, text: "MAXAPACITY: Apex factory line ratios 60% low / 80% mid; they propose 70/90 as untested ('Experimental'). Their simple-mode gear speeds 35/23/15% match gear RPM / 12000 (4200, 2800, 1800)."}
+  - field: Power curve at 5000 RPM
+    notes:
+      - {source: community, confidence: medium, text: "MAXAPACITY: the Apex curve is near-flat to 5000 RPM (75%) then drops to 1% at 5500 and 0% at 6000, which they think is the real top-end wall (not gear high speed). Experimental lever, not recommended."}
+  - field: Battery capacity
+    notes:
+      - {source: community, confidence: medium, text: "MAXAPACITY: the Apex pack label reads 72V 35Ah (2,520 Wh), 150A max discharge, 10A max charge, while the controller ships at 20 Ah; they suspect it skews the fuel gauge."}
+
+safety:
+  - {source: community, confidence: medium, text: "MAXAPACITY's Apex stop signs: sag over ~8 V at WOT, motor temp near 160 C, controller above 85 C, Error 09 or gears 2-3 behaving differently."}

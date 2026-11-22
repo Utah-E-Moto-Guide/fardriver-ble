@@ -1,13 +1,25 @@
 [project]
 name = "fardriver-ble"
-version = "0.1.0"
-description = "Read-only BLE backups of a Fardriver motor controller"
+version = "0.2.0"
+description = "Back up, compare and carefully tune a Fardriver motor controller over Bluetooth, from Claude or the command line"
+readme = "README.md"
+license = "MIT"
 requires-python = ">=3.11"
 dependencies = ["bleak>=1.0", "mcp>=2", "pyyaml>=6"]
 
+[project.scripts]
+fardriver-ble = "fardriver_ble.__main__:main"
+fardriver-mcp = "fardriver_ble.mcp_server:main"
+
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["fardriver_ble"]
+
+[tool.setuptools.package-data]
+fardriver_ble = ["knowledge/*.yml", "knowledge/profiles/*.yml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]  # tools/test_*_live.py talk to a real controller: run them by hand only
