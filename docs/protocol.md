@@ -292,3 +292,27 @@ on each pull of either lever, low on release, with live word 0xEE bit 9 in step.
 stayed 0 for 60 s. The watch now masks bit 15 out of the fault check (`FAULT_MASK`), reports it as
 `brake_signal`, and refuses a save while it is on at the end of the watch. An auto-revert with an empty
 fault list now counts as an auto-revert (`is not None`).
+
+## Live telemetry and regen (2026-11-22)
+
+`python -m trailtune live <mac>` (MCP: `fardriver_live`) keeps the telemetry blocks 0xE2/0xE8/0xEE that
+snapshots skip, with timestamps. Read-only: only the hello is sent.
+
+- 0xE8 = battery voltage x0.1 V (81.7..83.6 V across earlier captures; 79.9..81.6 V in today's tests).
+- 0xEA = battery current, signed. Stand test with brake regen on (`captures/2026-11-22T182200Z_live-regen-brake`,
+  8 spin-ups, each ended with a rear-brake pull): +3..+68 while driving with voltage sagging up to 1.5 V,
+  0 while coasting, and -1..-9 during the brake pulls (34 of 81 braking samples negative) with voltage
+  rising 0.1-0.2 V above rest.
+- 0xEA scale: probably **0.25 A per unit**, not 1 A. A second stand test after raising regen to 6 A / 8 A
+  (`captures/2026-11-22T213603Z_live-regen-6-8`) read down to -28 on brake pulls, with the pack rising
+  0.5 V. Three checks agree on 0.25 A:
+  - the regen reading scales with the setting: -9 at 2 A and -28 at 6 A, about 4.5 units per set amp;
+  - holding 2,100 RPM free on the stand reads 6: about 120 W at 0.25 A, but an unlikely 490 W at 1 A;
+  - spin-up (+66, 1.4 V sag) and regen (-28, 0.5 V rise) give the same pack resistance, about 85 mOhm.
+
+  So the -28 peak is about 7 A, under the 8 A maximum. The live watch reports both the raw `current` and
+  `amps_est` (raw x 0.25). Not yet checked with a clamp meter.
+- 0xE7 (signed) runs about -50..-900 while driving and flips to +110..+240 under braking: likely torque
+  current (Iq). 0xE6 likely Id. 0xEB..0xED, 0xF1..0xF3 move with load; not identified.
+- After a power cycle, low gear held the motor at 1,816 RPM (limit 1,800). Before it, with the dongle
+  connected, full throttle held a steady ~2,088 RPM whatever the gear switch said.

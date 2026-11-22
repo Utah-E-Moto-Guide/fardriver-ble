@@ -1,4 +1,4 @@
-"""Command line: python -m trailtune {scan,snapshot,list,diff,factory,report}"""
+"""Command line: python -m trailtune {scan,snapshot,live,list,diff,factory,report}"""
 
 import argparse
 import asyncio
@@ -32,6 +32,10 @@ def main():
     s.add_argument("--label", default="")
     s.add_argument("--timeout", type=float, default=30)
     s.add_argument("--dir", type=Path, default=snap.DEFAULT_DIR)
+    s = sub.add_parser("live", help="watch live RPM, voltage, brake and fault bits (read-only)")
+    s.add_argument("mac")
+    s.add_argument("--seconds", type=float, default=30, help="how long to listen once connected")
+    s.add_argument("--label", default="")
     s = sub.add_parser("list")
     s.add_argument("--dir", type=Path, default=snap.DEFAULT_DIR)
     s = sub.add_parser("diff")
@@ -55,6 +59,10 @@ def main():
         s = asyncio.run(snap.capture(a.mac, timeout=a.timeout))
         d = snap.save(s, a.dir, a.label)
         print(f"saved {d}\nserial {s.serial}  {json.dumps(s.stats)}")
+    elif a.cmd == "live":
+        from . import live
+
+        print(json.dumps(asyncio.run(live.watch(a.mac, a.seconds, a.label)), indent=1))
     elif a.cmd == "list":
         print(json.dumps(snap.list_snapshots(a.dir), indent=2))
     elif a.cmd == "report":
