@@ -4,7 +4,6 @@
 
 Back up, compare and carefully tune a **Fardriver motor controller** over Bluetooth from a laptop,
 by talking to Claude (or from the command line) instead of poking at the phone app.
-(Formerly `fardriver-ble`.)
 
 - **Back up** every setting to a dated snapshot plus a `.heb` file, the same format the phone apps
   export and import.
