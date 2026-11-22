@@ -165,7 +165,7 @@ async def fardriver_set(
 def tune_knowledge(field: str = "") -> str:
     """Sourced tuning knowledge. No field: the tunable settings and the context notes.
 
-    Each note has a source (manual, app, gdriver, owner, session, community, reasoning) and a
+    Each note has a source (manual, app, owner, session, community, reasoning) and a
     confidence. Say which source an idea comes from; never present reasoning as fact.
     """
     from . import tune

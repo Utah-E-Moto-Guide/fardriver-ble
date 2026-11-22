@@ -8,8 +8,8 @@ from fardriver_ble.decode import FLASH_READ_ADDR, TELEMETRY_ADDRS
 
 BASELINE = "2026-11-21T202712Z_baseline"
 
-# Values from the fixture bike's GDriver XLSX (2026-09-26) for settings they did not change.
-SHEET = {
+# Values from an earlier export of the fixture bike's settings (2026-09-26), for settings not changed since.
+EXPORT = {
     "High gear line current": 130, "High gear phase current": 350,
     "Boost line current": 130, "Boost phase current": 360,
     "Throttle closed voltage": 1.1, "Rated battery voltage": 72,
@@ -40,8 +40,8 @@ class AddressMapTest(unittest.TestCase):
         f = next(f for f in FIELDS if f.name == name)
         return f.value(self.words[f.addr])
 
-    def test_matches_gdriver_sheet(self):
-        for name, want in SHEET.items():
+    def test_matches_earlier_export(self):
+        for name, want in EXPORT.items():
             with self.subTest(name=name):
                 self.assertAlmostEqual(self.value(name), want, places=6)
 

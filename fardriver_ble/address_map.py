@@ -1,7 +1,7 @@
 """Field-level map of the controller's memory, in our own words.
 
 Built from reading where the official app displays each value (decompiled locally,
-not kept here), cross-checked against the owner's GDriver XLSX and live captures.
+not kept here), cross-checked against an earlier settings export and live captures.
 
 A word can hold several fields (bytes, nibbles, bit flags). Diffs work per field,
 so a word that mixes a setting byte with a live byte is reported correctly.
@@ -210,7 +210,7 @@ FIELDS: list[Field] = [
         for i in range(18)
     ],
     # regen curve: signed byte per point, point i at i*500 RPM (0x92 low = 0 RPM .. 0x9B high = 9500 RPM).
-    # Stored negative (braking); GDriver shows the magnitude.
+    # Stored negative (braking); apps show the magnitude.
     *[
         (_lo if i % 2 == 0 else _hi)(0x92 + i // 2, f"Regen curve at {500 * i} RPM", "setting", unit="%", signed=True)
         for i in range(20)

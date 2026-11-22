@@ -8,7 +8,7 @@ from fardriver_ble.nudge import NUDGEABLE
 from . import SNAPSHOTS
 
 NAMES = {f.name for f in FIELDS}
-SOURCES = {"manual", "app", "gdriver", "owner", "session", "community", "reasoning"}
+SOURCES = {"manual", "app", "owner", "session", "community", "reasoning"}
 
 
 class KnowledgeTest(unittest.TestCase):

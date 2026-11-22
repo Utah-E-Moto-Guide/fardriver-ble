@@ -65,7 +65,7 @@ class Snapshot:
         data = Path(path).read_bytes()
         words = heb_main_words(data)
         second = list(struct.unpack("<192H", data[312:696]))
-        m = re.match(r"(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})", Path(path).name)  # GDriver naming
+        m = re.match(r"(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})", Path(path).name)  # date and time in the export's file name
         if m:
             taken = f"{m[1]}T{m[2]}:{m[3]}:{m[4]}+00:00"
         else:

@@ -6,7 +6,6 @@
 # Every claim carries a source:
 #   manual    Fardriver "adjustment instructions of the control parameters" PDF (far-driver.com)
 #   app       the official app's own labels, limits and code
-#   gdriver   the GDriver XLSX label
 #   owner     something the rider said (dated); first-hand only
 #   session   a logged tuning session result
 #   community forum / community notes; treat as claims, not facts.
@@ -36,13 +35,11 @@ settable:
     plain: Response when the throttle is released (exact behaviour not documented).
     notes:
       - {source: app, confidence: high, text: "App field 'FreeThrottle', accepts 0..192."}
-      - {source: gdriver, confidence: medium, text: "GDriver calls it 'Throttle-release response'."}
       - {source: reasoning, confidence: low, text: "Meaning is uncertain; change only in small steps and describe the feel carefully."}
   - field: Acceleration curve update interval
     plain: How often the throttle ramp is updated. Shown in the app as (raw + 1) x 2 ms.
     notes:
       - {source: app, confidence: high, text: "App field 'CurveTime', accepts raw 4..1000, displays (raw+1)*2 ms."}
-      - {source: gdriver, confidence: medium, text: "GDriver: 'Acceleration-curve update interval'."}
       - {source: reasoning, confidence: low, text: "A longer interval probably stretches the ramp (smoother, slower); works together with the acceleration step."}
   - field: Throttle response profile (0 Line, 1 Sport, 2 ECO)
     plain: Overall throttle character. 0 = Line, 1 = Sport, 2 = ECO.
