@@ -5,7 +5,9 @@ Guardrails (policy in policy.py):
 - The proposed state must pass policy.violations (factory current ceiling, gear order, regen order,
   power curve never rising, ...). High-tier fields (currents, power curve) need acknowledge_risk.
 - After every write the controller's fault bits (0xE3) are watched; a new fault makes the tool
-  write the previous value back immediately and report it.
+  write the previous value back immediately and report it. Bit 15 of 0xE3 is the brake signal, not
+  a fault: it is reported, not reverted on, and a save is refused while it is on at the end of the
+  watch (a lever held, or the controller reading the brake as applied after the change).
 - Bit fields are written the way the app does: the whole word is rebuilt from a fresh
   reading, changing only the field's bits.
 - One step from the current value, or back to the value in an earlier snapshot
@@ -34,7 +36,7 @@ from bleak import BleakClient
 
 from . import snapshot as snap
 from . import policy
-from .address_map import FIELDS, faults, risk
+from .address_map import FAULT_MASK, FIELDS, brake_on, faults, risk
 from .decode import frame_block
 from .listen import CHAR, Framer
 from .probe import HELLO, safe_write
@@ -100,6 +102,10 @@ async def _write_and_verify(
     target = new_word(name, raw, current_word)
     fault_before: int | None = None
     fault_after = 0
+    brake_before = False
+    brake_now = None  # brake signal in the latest live frame after the write
+    brake_frames = 0  # live frames after the write with the brake signal on
+    live_frames = 0
     t_readback = None
     block = max(b for b in snap.PARAM_BLOCKS if b <= f.addr)  # the stream block holding this word
     seen_new = 0
@@ -113,12 +119,18 @@ async def _write_and_verify(
 
         def on_frame(fr: bytes):
             nonlocal seen_new, started, fault_before, fault_after, t_readback
+            nonlocal brake_before, brake_now, brake_frames, live_frames
             b = frame_block(fr)
-            if b and b[0] == 0xE2:  # live block: word 0xE3 holds the fault bits
+            if b and b[0] == 0xE2:  # live block: word 0xE3 holds the fault bits (bit 15 = brake signal)
+                e3 = b[1][1]
                 if not wrote:
-                    fault_before = b[1][1]
+                    fault_before = e3 & FAULT_MASK
+                    brake_before = brake_before or brake_on(e3)
                 else:
-                    fault_after |= b[1][1]
+                    fault_after |= e3 & FAULT_MASK
+                    brake_now = brake_on(e3)
+                    live_frames += 1
+                    brake_frames += brake_now
             if b and b[0] == block:
                 started = True
                 if b[1][f.addr - block] == target and wrote:
@@ -167,7 +179,22 @@ async def _write_and_verify(
         "wrote": wrote, "frame": frame.hex(), "read_back_twice": seen_new >= 2,
         "faults_before": faults(fault_before or 0), "new_faults": faults(fault_after & ~(fault_before or 0)),
         "auto_reverted": auto_reverted,
+        "brake_signal": {"before_write": brake_before, "frames_on_after_write": brake_frames,
+                         "live_frames_after_write": live_frames, "on_at_end": bool(brake_now)},
     }
+
+
+def watch_problems(result: dict) -> list[str]:
+    """What the post-write watch saw that blocks a save."""
+    problems = []
+    if result.get("auto_reverted") is not None:
+        problems.append(f"auto-reverted after faults {result['auto_reverted']}")
+    if result.get("brake_signal", {}).get("on_at_end"):
+        problems.append("brake signal still on at the end of the watch (a lever held, or the controller "
+                        "reads the brake as applied after this change)")
+    if not result.get("read_back_twice"):
+        problems.append("new value was not read back")
+    return problems
 
 
 def _addr_frame(addr: int, payload: bytes) -> bytes:
@@ -289,11 +316,9 @@ async def nudge(
         **result, "before": bdir.name, "after": adir.name,
     }
     if save:
-        problems = presave_check(before, after, name, f.value(target))
-        if result.get("auto_reverted"):
-            problems = [f"auto-reverted after faults {result['auto_reverted']}"] + problems
-        if problems or not result["read_back_twice"]:
-            out["save"] = {"refused": problems or ["new value was not read back"]}
+        problems = watch_problems(result) + presave_check(before, after, name, f.value(target))
+        if problems:
+            out["save"] = {"refused": problems}
             out["diff"] = snap.format_diff(snap.diff(before, after))
             return out
         out["save"] = await _send_save(mac, snap.REPO / "captures" / f"{adir.name}-save")

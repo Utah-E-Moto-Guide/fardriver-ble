@@ -142,15 +142,19 @@ async def try_change(mac: str, field: str, value: float, save: bool = False, ack
     trial = {"n": len(s["trials"]) + 1, "field": field, "tier": r.get("tier"), "from": r["from"], "to": r["to"],
              "display_from": r["from"], "display_to": r["to"], "unit": r["unit"],
              "faults": r.get("new_faults"), "auto_reverted": r.get("auto_reverted"),
+             "brake_signal": r.get("brake_signal"),
              "saved": bool(save and r.get("save", {}).get("saved")), "status": "applied", "at": _now(),
              "snapshots": [r["before"], r["after"]] + ([r["saved_snapshot"]] if r.get("saved_snapshot") else []),
              "notes": []}
-    if r.get("auto_reverted"):
+    if r.get("auto_reverted") is not None:
         trial["status"] = "failed"
         trial["notes"].append({"at": _now(), "text": f"controller faulted ({r['auto_reverted']}); value written back automatically"})
     elif save and not trial["saved"]:
         trial["status"] = "failed"
         trial["notes"].append({"at": _now(), "text": f"save refused: {r.get('save')}"})
+    if (r.get("brake_signal") or {}).get("on_at_end"):
+        trial["notes"].append({"at": _now(), "text": "brake signal was on at the end of the watch; "
+                               "check nobody held a lever, and that the bike still drives"})
     s["trials"].append(trial)
     if trial["saved"]:
         s["saved_ref"] = trial["snapshots"][-1]

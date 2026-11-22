@@ -136,7 +136,7 @@ and the 120/70-12 tire.
 
 Corrections this made to earlier guesses:
 - 0x05 is the **settings save count** (96 in Sep, the "96" in GDriver's file name; 132 now).
-- 0x1A packs throttle follow, **ECO mode**, field weakening, speed pulses and gear mode. Its Sep -> Nov change
+- 0x1A packs energy feedback (regen switch, app FollowConfig; was mislabelled throttle follow), **ECO mode**, field weakening, speed pulses and gear mode. Its Sep -> Nov change
   is ECO mode 1 -> 2: a fourth setting change, not controller data. **Owner confirmed it was theirs (2026-11-21).**
 - 0x6D/0x81 odometer, 0x7D/0x7E work time, 0x82 live throttle voltage.
 - 0xD1 and 0xD3 mix a setting byte with a live byte (average power, average speed).
@@ -288,3 +288,13 @@ high tier); a new fault writes the previous value back automatically.
   fault bits read before and after (System OK throughout, no new faults), each restored from the start
   snapshot. End vs start: no setting changes, save count 134. The auto-revert branch has not run live
   (it needs a real fault); it is covered only by code review so far.
+
+## Brake signal in the fault word (2026-11-22)
+
+The first live auto-revert: Energy feedback 1 -> 2 read back as 2, then 0xE3 went 0 -> 0x8000 (bit 15,
+unnamed) and the watch wrote 1 back (`captures/2026-11-22T000811Z_tune-2026-11-21-1647-try-before-write`).
+A read-only brake test (hellos only, bike on the stand, regen off) showed bit 15 is the brake signal: high
+on each pull of either lever, low on release, with live word 0xEE bit 9 in step. At rest with no levers it
+stayed 0 for 60 s. The watch now masks bit 15 out of the fault check (`FAULT_MASK`), reports it as
+`brake_signal`, and refuses a save while it is on at the end of the watch. An auto-revert with an empty
+fault list now counts as an auto-revert (`is not None`).
