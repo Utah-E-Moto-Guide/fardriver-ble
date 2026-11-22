@@ -56,7 +56,7 @@ async def probe(
     framer = Framer()
     outdir.mkdir(parents=True, exist_ok=True)
     t0 = time.monotonic()
-    with open(outdir / "raw_notifications.txt", "w") as raw:
+    with open(outdir / "raw_notifications.txt", "w", encoding="utf-8") as raw:
 
         def log(line: str):
             raw.write(f"{time.monotonic() - t0:8.3f} {line}\n")
@@ -106,8 +106,8 @@ async def probe(
         "settings_frames_seen": sorted(framer.settings),
         "settings_frames_missing": [i for i in SETTINGS_IDS if i not in framer.settings],
     }
-    (outdir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
-    (outdir / "settings_frames.json").write_text(json.dumps(framer.settings, indent=2) + "\n")
+    (outdir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+    (outdir / "settings_frames.json").write_text(json.dumps(framer.settings, indent=2) + "\n", encoding="utf-8")
     return summary
 
 

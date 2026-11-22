@@ -55,7 +55,7 @@ def main(blob_path, manifest_path, outdir):
     print(f"XABA v{version}: {local_count} local, {global_count} global, id {blob_id}")
 
     names = {}
-    for line in Path(manifest_path).read_text().splitlines()[1:]:
+    for line in Path(manifest_path).read_text(encoding="utf-8").splitlines()[1:]:
         parts = line.split()
         if len(parts) >= 5 and int(parts[2]) == blob_id:
             names[int(parts[3])] = parts[4]

@@ -120,7 +120,7 @@ async def _write_and_verify(
     started = False
     log_dir.mkdir(parents=True, exist_ok=True)
     t0 = time.monotonic()
-    with open(log_dir / "raw_notifications.txt", "w") as logf:
+    with open(log_dir / "raw_notifications.txt", "w", encoding="utf-8") as logf:
 
         def log(line):
             logf.write(f"{time.monotonic() - t0:8.3f} {line}\n")
@@ -240,7 +240,7 @@ async def _send_save(mac: str, log_dir: Path) -> dict:
     stamp = save_stamp_frame(now)
     log_dir.mkdir(parents=True, exist_ok=True)
     t0 = time.monotonic()
-    with open(log_dir / "raw_notifications.txt", "w") as logf:
+    with open(log_dir / "raw_notifications.txt", "w", encoding="utf-8") as logf:
 
         def log(line):
             logf.write(f"{time.monotonic() - t0:8.3f} {line}\n")

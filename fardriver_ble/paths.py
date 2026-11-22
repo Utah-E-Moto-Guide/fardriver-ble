@@ -1,6 +1,7 @@
 """Where fardriver-ble keeps the rider's data. Nothing personal lives in the package or the repo.
 
-Default: $XDG_DATA_HOME/fardriver-ble (usually ~/.local/share/fardriver-ble).
+Default: Linux $XDG_DATA_HOME/fardriver-ble (usually ~/.local/share/fardriver-ble), macOS
+~/Library/Application Support/fardriver-ble, Windows %LOCALAPPDATA%\\fardriver-ble.
 Override with FARDRIVER_DATA, e.g. a private git repo of your own to keep the history.
 
     snapshots/       one folder per snapshot (snapshot.json + controller.heb)
@@ -12,13 +13,19 @@ Override with FARDRIVER_DATA, e.g. a private git repo of your own to keep the hi
 """
 
 import os
+import sys
 from pathlib import Path
 
 
 def data_dir() -> Path:
     if os.environ.get("FARDRIVER_DATA"):
         return Path(os.environ["FARDRIVER_DATA"]).expanduser()
-    base = os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share"
+    if sys.platform == "win32":
+        base = os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local"
+    elif sys.platform == "darwin":
+        base = Path.home() / "Library" / "Application Support"
+    else:
+        base = os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share"
     return Path(base) / "fardriver-ble"
 
 

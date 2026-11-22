@@ -36,7 +36,7 @@ def parse_raw_log(path) -> list[bytes]:
     from .crc import frame_ok
 
     stream = bytearray()
-    for line in open(path):
+    for line in open(path, encoding="utf-8"):
         parts = line.split()
         if len(parts) == 3 and parts[1] == "RX":
             stream += bytes.fromhex(parts[2])

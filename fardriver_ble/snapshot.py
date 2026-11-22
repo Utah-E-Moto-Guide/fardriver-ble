@@ -210,7 +210,7 @@ def save(snap: Snapshot, root: Path = DEFAULT_DIR, label: str = "") -> Path:
     name = stamp + (f"_{label}" if label else "")
     d = Path(root) / name
     d.mkdir(parents=True, exist_ok=False)
-    (d / "snapshot.json").write_text(snap.to_json())
+    (d / "snapshot.json").write_text(snap.to_json(), encoding="utf-8")
     full = snap.heb()
     if full:
         (d / "controller.heb").write_bytes(full)
@@ -228,13 +228,13 @@ def load(ref: str | Path, root: Path = DEFAULT_DIR) -> Snapshot:
         return Snapshot.from_heb(p)
     if p.is_dir():
         p = p / "snapshot.json"
-    return Snapshot.from_json(p.read_text())
+    return Snapshot.from_json(p.read_text(encoding="utf-8"))
 
 
 def list_snapshots(root: Path = DEFAULT_DIR) -> list[dict]:
     out = []
     for d in sorted(Path(root).glob("*/snapshot.json")):
-        s = Snapshot.from_json(d.read_text())
+        s = Snapshot.from_json(d.read_text(encoding="utf-8"))
         out.append({"name": d.parent.name, "taken_at": s.taken_at, "serial": s.serial, "source": s.source})
     return out
 
@@ -258,7 +258,7 @@ def factory_reference(serial: str, root: Path | None = None) -> Snapshot | None:
     p = _factory_path(serial, root)
     if not p.exists():
         return None
-    return Snapshot.from_json(json.dumps(json.loads(p.read_text())["snapshot"]))
+    return Snapshot.from_json(json.dumps(json.loads(p.read_text(encoding="utf-8"))["snapshot"]))
 
 
 def set_factory_reference(s: Snapshot, source: str, root: Path | None = None) -> Path:
@@ -268,14 +268,14 @@ def set_factory_reference(s: Snapshot, source: str, root: Path | None = None) ->
     p.parent.mkdir(parents=True, exist_ok=True)
     rec = {"serial": s.serial, "source": source, "set_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
            "snapshot_taken_at": s.taken_at, "snapshot": json.loads(s.to_json())}
-    p.write_text(json.dumps(rec, indent=1) + "\n")
+    p.write_text(json.dumps(rec, indent=1) + "\n", encoding="utf-8")
     return p
 
 
 def factory_references(root: Path | None = None) -> list[dict]:
     out = []
     for p in sorted(Path(root or paths.FACTORY).glob("*.json")):
-        rec = json.loads(p.read_text())
+        rec = json.loads(p.read_text(encoding="utf-8"))
         out.append({k: rec.get(k) for k in ("serial", "source", "set_at", "snapshot_taken_at")})
     return out
 

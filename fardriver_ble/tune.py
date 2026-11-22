@@ -38,7 +38,7 @@ def _now() -> str:
 
 
 def _read_yaml(p: Path) -> dict:
-    return yaml.safe_load(p.read_text()) or {}
+    return yaml.safe_load(p.read_text(encoding="utf-8")) or {}
 
 
 def available_profiles() -> list[str]:
@@ -140,20 +140,20 @@ def _path(sid: str) -> Path:
 
 
 def _load(sid: str) -> dict:
-    return json.loads(_path(sid).read_text())
+    return json.loads(_path(sid).read_text(encoding="utf-8"))
 
 
 def _store(s: dict) -> None:
     p = _path(s["id"])
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(json.dumps(s, indent=1) + "\n")
+    p.write_text(json.dumps(s, indent=1) + "\n", encoding="utf-8")
 
 
 def current_session() -> dict | None:
     if not SESSIONS.exists():
         return None
     for p in sorted(SESSIONS.glob("*/session.json"), reverse=True):
-        s = json.loads(p.read_text())
+        s = json.loads(p.read_text(encoding="utf-8"))
         if s.get("status") == "open":
             return s
     return None
@@ -162,7 +162,7 @@ def current_session() -> dict | None:
 def history() -> list[dict]:
     if not SESSIONS.exists():
         return []
-    return [json.loads(p.read_text()) for p in sorted(SESSIONS.glob("*/session.json"))]
+    return [json.loads(p.read_text(encoding="utf-8")) for p in sorted(SESSIONS.glob("*/session.json"))]
 
 
 def _open_trial(s: dict) -> dict | None:
