@@ -41,4 +41,3 @@ SOFTWARE.
 - MAXAPACITY "DRAX Apex FarDriver tuning guide": credited for how to tune this particular bike
   (stock settings, owner results, safety practice). Community claims paraphrased with attribution in
   `fardriver_ble/knowledge/profiles/xpro-drax-apex.yml` and the shipped safety notes, with a few short quoted phrases. Individual owners are not named.
-- settings export labels: used to cross-check field names; the owner's export file is not in this repo.

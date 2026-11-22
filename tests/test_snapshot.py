@@ -65,7 +65,7 @@ class SecondSectionTest(unittest.TestCase):
         self.assertTrue(col.second_done())
         second = col.second_words()
         self.assertEqual(len(second), 192)
-        # Same as the owner's September settings export: only words 17 and 19 non-zero.
+        # Same as the September export: only words 17 and 19 non-zero.
         self.assertEqual({i: v for i, v in enumerate(second) if v}, {17: 61440, 19: 64})
         words = {a + i: v for a, w in col.confirmed.items() for i, v in enumerate(w)}
         s = snap.Snapshot("2026-11-21T21:10:00+00:00", "replay", words, second=second)
