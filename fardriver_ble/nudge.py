@@ -112,10 +112,10 @@ async def _write_and_verify(
     started = False
     log_dir.mkdir(parents=True, exist_ok=True)
     t0 = time.monotonic()
-    with open(log_dir / "raw_notifications.txt", "w") as raw:
+    with open(log_dir / "raw_notifications.txt", "w") as logf:
 
         def log(line):
-            raw.write(f"{time.monotonic() - t0:8.3f} {line}\n")
+            logf.write(f"{time.monotonic() - t0:8.3f} {line}\n")
 
         def on_frame(fr: bytes):
             nonlocal seen_new, started, fault_before, fault_after, t_readback
@@ -232,10 +232,10 @@ async def _send_save(mac: str, log_dir: Path) -> dict:
     stamp = save_stamp_frame(now)
     log_dir.mkdir(parents=True, exist_ok=True)
     t0 = time.monotonic()
-    with open(log_dir / "raw_notifications.txt", "w") as raw:
+    with open(log_dir / "raw_notifications.txt", "w") as logf:
 
         def log(line):
-            raw.write(f"{time.monotonic() - t0:8.3f} {line}\n")
+            logf.write(f"{time.monotonic() - t0:8.3f} {line}\n")
 
         started = False
 
