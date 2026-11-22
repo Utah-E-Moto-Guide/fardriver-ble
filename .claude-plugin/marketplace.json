@@ -1,0 +1,11 @@
+{
+  "name": "fardriver-ble",
+  "owner": { "name": "Utah E-Moto Guide" },
+  "plugins": [
+    {
+      "name": "fardriver-ble",
+      "source": "./",
+      "description": "Back up, compare and carefully tune a Fardriver motor controller over Bluetooth."
+    }
+  ]
+}

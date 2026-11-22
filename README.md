@@ -46,7 +46,24 @@ You use it at your own risk; see [LICENSE](LICENSE).
 
 ## Install
 
-Needs Python 3.11+, a Bluetooth adapter, and [uv](https://docs.astral.sh/uv/) (or plain pip).
+You need a Bluetooth adapter and [uv](https://docs.astral.sh/uv/getting-started/installation/), which
+fetches Python 3.11+ and the dependencies by itself.
+
+### As a Claude Code plugin (recommended)
+
+At a Claude Code prompt:
+
+```
+/plugin install fardriver-ble --marketplace Utah-E-Moto-Guide/fardriver-ble
+```
+
+Answer `y` to add the marketplace, then pick a scope (user is usual). This installs the `fardriver`
+MCP tools and the `fardriver-tune` skill together. The first start takes a few seconds while uv sets
+up the environment. From a shell, the same is `claude plugin install fardriver-ble --marketplace
+Utah-E-Moto-Guide/fardriver-ble`. In the desktop app: + next to the prompt box, Plugins, Add
+marketplace `Utah-E-Moto-Guide/fardriver-ble`, then Add plugin.
+
+### From a clone (for the command line, or to hack on it)
 
 ```sh
 git clone https://github.com/Utah-E-Moto-Guide/fardriver-ble
@@ -54,12 +71,14 @@ cd fardriver-ble
 uv venv .venv && uv pip install --python .venv/bin/python -e .
 ```
 
-### Use it from Claude Code
+To use a clone from Claude Code instead of the plugin, use one or the other, not both:
 
 ```sh
 claude mcp add -s user fardriver -- "$PWD/.venv/bin/python" -m fardriver_ble.mcp_server
 ln -s "$PWD/skills/fardriver-tune" ~/.claude/skills/fardriver-tune   # the guided tuning method
 ```
+
+### Use it
 
 Then ask things like:
 
@@ -68,7 +87,7 @@ Then ask things like:
 - "My throttle is too jumpy on loose climbs. Help me tune it."
 - "Turn on brake regen, carefully."
 
-### Or from the command line
+### Or from the command line (a clone)
 
 ```sh
 .venv/bin/fardriver-ble scan

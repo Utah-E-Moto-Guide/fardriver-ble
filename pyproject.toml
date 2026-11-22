@@ -1,6 +1,6 @@
 [project]
 name = "fardriver-ble"
-version = "0.2.0"
+version = "0.3.0"
 description = "Back up, compare and carefully tune a Fardriver motor controller over Bluetooth, from Claude or the command line"
 readme = "README.md"
 license = "MIT"

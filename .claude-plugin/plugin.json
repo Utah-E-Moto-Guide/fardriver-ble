@@ -1,0 +1,31 @@
+{
+  "name": "fardriver-ble",
+  "version": "0.3.0",
+  "description": "Back up, compare and carefully tune a Fardriver motor controller over Bluetooth: MCP tools plus a guided garage-to-trail tuning skill.",
+  "author": {
+    "name": "Utah E-Moto Guide"
+  },
+  "homepage": "https://github.com/Utah-E-Moto-Guide/fardriver-ble",
+  "repository": "https://github.com/Utah-E-Moto-Guide/fardriver-ble",
+  "license": "MIT",
+  "keywords": [
+    "fardriver",
+    "e-moto",
+    "ebike",
+    "motor-controller",
+    "bluetooth",
+    "tuning"
+  ],
+  "mcpServers": {
+    "fardriver": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--quiet",
+        "--directory",
+        "${CLAUDE_PLUGIN_ROOT}",
+        "fardriver-mcp"
+      ]
+    }
+  }
+}
