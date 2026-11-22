@@ -292,3 +292,18 @@ on each pull of either lever, low on release, with live word 0xEE bit 9 in step.
 stayed 0 for 60 s. The watch now masks bit 15 out of the fault check (`FAULT_MASK`), reports it as
 `brake_signal`, and refuses a save while it is on at the end of the watch. An auto-revert with an empty
 fault list now counts as an auto-revert (`is not None`).
+
+## Live telemetry and regen (2026-11-22)
+
+`python -m trailtune live <mac>` (MCP: `fardriver_live`) keeps the telemetry blocks 0xE2/0xE8/0xEE that
+snapshots skip, with timestamps. Read-only: only the hello is sent.
+
+- 0xE8 = battery voltage x0.1 V (81.7..83.6 V across earlier captures; 79.9..81.6 V in today's tests).
+- 0xEA = battery current, signed. Stand test with brake regen on (`captures/2026-11-22T182200Z_live-regen-brake`,
+  8 spin-ups, each ended with a rear-brake pull): +3..+68 while driving with voltage sagging up to 1.5 V,
+  0 while coasting, and -1..-9 during the brake pulls (34 of 81 braking samples negative) with voltage
+  rising 0.1-0.2 V above rest. Units probably amps; not checked against a meter.
+- 0xE7 (signed) runs about -50..-900 while driving and flips to +110..+240 under braking: likely torque
+  current (Iq). 0xE6 likely Id. 0xEB..0xED, 0xF1..0xF3 move with load; not identified.
+- After a power cycle, low gear held the motor at 1,816 RPM (limit 1,800). Before it, with the dongle
+  connected, full throttle held a steady ~2,088 RPM whatever the gear switch said.

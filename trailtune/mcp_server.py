@@ -60,6 +60,22 @@ async def fardriver_scan(seconds: float = 8.0) -> str:
 
 @mcp.tool()
 @refusals_as_text
+async def fardriver_live(mac: str, seconds: float = 30.0, label: str = "") -> str:
+    """Watch live telemetry (motor RPM, battery voltage, brake signal, fault bits) for `seconds`.
+
+    Read-only: sends only the hello/keep-alive. Connecting takes 20-30 s at the bike and the clock
+    starts after that, so tell the rider to begin (twist, pull a lever) only once the call has been
+    running ~30 s, or make `seconds` long enough to cover it. Returns ranges and a ~1 s timeline;
+    every sample and the raw log are saved under captures/. Nothing here turns the motor: if the
+    rider twists the throttle, the bike must be on a stand, driven wheel off the ground, strapped down.
+    """
+    from . import live
+
+    return json.dumps(await live.watch(mac, seconds, label), indent=1)
+
+
+@mcp.tool()
+@refusals_as_text
 async def fardriver_snapshot(mac: str, label: str = "") -> str:
     """Read the controller's full settings over BLE and save a dated snapshot with a .heb backup.
 

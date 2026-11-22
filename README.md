@@ -86,12 +86,14 @@ Then ask things like:
 - "What changed since my first backup?"
 - "My throttle is too jumpy on loose climbs. Help me tune it."
 - "Turn on brake regen, carefully."
+- "Watch live while I spin the wheel on the stand and pull the brake. Is regen charging?"
 
 ### Or from the command line (a clone)
 
 ```sh
 .venv/bin/trailtune scan
 .venv/bin/trailtune snapshot <MAC> --label before-tune
+.venv/bin/trailtune live <MAC> --seconds 60             # live RPM, volts, battery current, brake (read-only)
 .venv/bin/trailtune list
 .venv/bin/trailtune diff <old snapshot or .heb> [new]   # default new: the latest
 .venv/bin/trailtune factory                             # show factory references
