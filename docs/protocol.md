@@ -33,7 +33,7 @@ The app drops the link if it gets the 10-byte notification `AT+VERSION` (adapter
 16 bytes, start byte `0xAA`, resync by scanning for `0xAA`.
 
 - **New format** (`byte1 & 0x80`): CRC-16/MODBUS (reflected poly 0xA001) over bytes 0..13, initial
-  value `0x7F3C`, stored low byte then high byte in bytes 14, 15. See `fardriver_ble/crc.py`.
+  value `0x7F3C`, stored low byte then high byte in bytes 14, 15. See `trailtune/crc.py`.
   - `id = byte1 & 0x7F`
   - **ids 56..87 = settings image.** Frame `id` carries six little-endian u16 words in bytes 2..13,
     written to words `(id-56)*6 .. +5` of a 192-word array. All 32 seen = complete image.
@@ -82,7 +82,7 @@ Deliberately not pursued: the app's forced owner-unbind flow and a hardcoded-key
   So the idle payload above is "no host", not a baud problem.
 - **2026-11-21 run 3** (`captures/2026-11-21-run3/`): hello re-sent every 1 s for 30 s (31 writes, nothing else).
   Stream held the whole time: 1030 frames, 0 bad CRC, ids 0..54, no 56..87.
-  - Decoded with the id-to-address map (`fardriver_ble/decode.py`): 186 parameter words (31 blocks of 6) plus
+  - Decoded with the id-to-address map (`trailtune/decode.py`): 186 parameter words (31 blocks of 6) plus
     the 0xE2/0xE8/0xEE telemetry blocks. 180 of 186 parameter words never changed; 145 are non-zero.
   - Run 2 vs run 3 (separate connections): 179 of 186 words identical. Differ: 0xD8, 0xDA, 0xDC, 0xF5, 0xF6,
     0xF8, 0xFB (counter/clock-like; 0xF5/0xF6 tick up).
@@ -98,7 +98,7 @@ Still to do: compare against a `.heb` exported by the phone app to prove nothing
 
 Against a settings export from 2026-09-26 (not committed):
 - bytes 0..311 = 26 stream blocks (156 words) packed in address order: every non-telemetry block from 0x00
-  to 0xD0 except 0x5D. See `HEB_BLOCKS` in `fardriver_ble/decode.py`.
+  to 0xD0 except 0x5D. See `HEB_BLOCKS` in `trailtune/decode.py`.
 - Today's stream vs that file: 142/156 words identical; 14 differ, same in runs 2 and 3. Owner says 4-5 settings
   changed since September. Likely: 0x1C battery capacity 20 -> 35, 0x2F throttle acceleration 175 -> 64,
   0x2B throttle deceleration 128 -> 64 (from the export's labels). Others unnamed:
@@ -121,7 +121,7 @@ Against a settings export from 2026-09-26 (not committed):
 
 ## Address map (2026-11-21)
 
-`fardriver_ble/address_map.py` is the field-level map: 280 fields over the 186 parameter words plus the
+`trailtune/address_map.py` is the field-level map: 280 fields over the 186 parameter words plus the
 runtime blocks, each with bits, scale, unit and a kind (setting / calibration / counter / stamp / identity /
 live / unknown). Built by reading where the official app displays each value (`tools/extract_field_map.py`
 pulls the raw assignments from a local decompile into `local/`), then checked against the September export:
@@ -211,7 +211,7 @@ wiring, direction or protection. Discovery tests should only nudge a "safe" fiel
 
 ## First setting write: throttle acceleration 64 -> 65, no Save (2026-11-21)
 
-`fardriver_ble/nudge.py` (only NUDGEABLE safe fields, one step, app range, never 0xA0 / save stamp).
+`trailtune/nudge.py` (only NUDGEABLE safe fields, one step, app range, never 0xA0 / save stamp).
 Frame `AA C6 2F 2F 41 00 89 A0`. Snapshots `accel-65-before` / `accel-65-after`:
 - Read back as 65 twice from the live stream. Diff: **one setting change** (0x2F 64 -> 65), save count 132 -> 132,
   save stamp unchanged, 0xB9 unchanged, only 2 live fields moved.
@@ -260,7 +260,7 @@ no setting changes, save count 134 throughout.
 
 ## Tune tool (2026-11-21)
 
-`fardriver_ble/tune.py` + `tune_*` MCP tools + `skills/fardriver-tune`. Knowledge in `fardriver_ble/knowledge/settings.yml`
+`trailtune/tune.py` + `tune_*` MCP tools + `skills/trailtune`. Knowledge in `trailtune/knowledge/settings.yml`
 (sourced notes; manual PDF facts in our own words). Manual corrections to the map: 0x9C AN = motor type
 constant (ours 16, IPM) and LM = motor matching (ours 22, manual default), both calibration/never.
 Audit against the manual flags: low-voltage cutoff 60 V (manual ~63 V for 72 V), regen max +100% over
@@ -271,7 +271,7 @@ start, RAM-only try 64 -> 60, second change refused, feedback (value still activ
 ## Wider allow list with tiers (2026-11-21)
 
 Owner: "allow wide exploration but no stupidity"; currents only at or below factory; power curve in small
-steps below 6000 RPM. `fardriver_ble/policy.py` holds 54 changeable fields in three tiers (comfort,
+steps below 6000 RPM. `trailtune/policy.py` holds 54 changeable fields in three tiers (comfort,
 caution, high) with display-unit limits and steps, and sanity rules that cannot be overridden (factory
 current ceiling, boost >= max, low <= mid <= high gear <= limiter <= 6000 RPM, max regen >= normal, power
 curve never rising). High tier needs `acknowledge_risk`. Fault bits: live word 0xE3 (17 codes; 9 = phase

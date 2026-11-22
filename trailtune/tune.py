@@ -12,9 +12,9 @@ Rules enforced here:
 Sessions live in <data>/sessions/<id>/session.json (see paths.py).
 
 Knowledge is merged from three layers, in this order:
-  1. fardriver_ble/knowledge/settings.yml       shipped, generic Fardriver notes
-  2. fardriver_ble/knowledge/profiles/<name>.yml bike profiles turned on in <data>/config.yml
-                                                 (`profiles: [xpro-drax-apex]`) or FARDRIVER_PROFILE
+  1. trailtune/knowledge/settings.yml       shipped, generic Fardriver notes
+  2. trailtune/knowledge/profiles/<name>.yml bike profiles turned on in <data>/config.yml
+                                                 (`profiles: [xpro-drax-apex]`) or TRAILTUNE_PROFILE
   3. <data>/knowledge.yml                        the rider's own notes (same format)
 """
 
@@ -46,7 +46,7 @@ def available_profiles() -> list[str]:
 
 
 def active_profiles() -> list[str]:
-    env = os.environ.get("FARDRIVER_PROFILE")
+    env = os.environ.get("TRAILTUNE_PROFILE")
     if env is not None:
         return [x.strip() for x in env.split(",") if x.strip()]
     return list(paths.config().get("profiles") or [])

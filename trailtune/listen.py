@@ -1,6 +1,6 @@
 """Passive Fardriver BLE listener. Subscribes to notifications only; never writes.
 
-Usage: python -m fardriver_ble.listen <mac> <seconds> <outdir>
+Usage: python -m trailtune.listen <mac> <seconds> <outdir>
 """
 
 import asyncio

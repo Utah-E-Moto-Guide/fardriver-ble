@@ -3,7 +3,7 @@
 #
 # The key is the firmware code and software version the controller reports (words 0x86-0x87),
 # e.g. firmware HA + software 80 = "HA80", the tail of a model name like WC72V150AB_17_1ZHA80.
-# Adding one: run `fardriver-ble report <MAC>` and open an issue with its output and what you tested.
+# Adding one: run `trailtune report <MAC>` and open an issue with its output and what you tested.
 
 verified:
   - firmware: HA

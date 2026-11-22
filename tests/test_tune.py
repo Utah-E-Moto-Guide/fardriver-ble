@@ -1,9 +1,9 @@
 import unittest
 
-from fardriver_ble import snapshot as snap
-from fardriver_ble import tune
-from fardriver_ble.address_map import FIELDS
-from fardriver_ble.nudge import NUDGEABLE
+from trailtune import snapshot as snap
+from trailtune import tune
+from trailtune.address_map import FIELDS
+from trailtune.nudge import NUDGEABLE
 
 from . import SNAPSHOTS
 
@@ -38,11 +38,11 @@ class ProfileTest(unittest.TestCase):
         import os
 
         for name in tune.available_profiles():
-            os.environ["FARDRIVER_PROFILE"] = name
+            os.environ["TRAILTUNE_PROFILE"] = name
             try:
                 k = tune.knowledge()
             finally:
-                os.environ["FARDRIVER_PROFILE"] = ""
+                os.environ["TRAILTUNE_PROFILE"] = ""
             self.assertEqual(k["layers"], ["shipped", f"profile:{name}"])
             for e in k["settable"] + k["context"]:
                 self.assertIn(e["field"], NAMES)
@@ -52,12 +52,12 @@ class ProfileTest(unittest.TestCase):
     def test_unknown_profile_is_an_error(self):
         import os
 
-        os.environ["FARDRIVER_PROFILE"] = "no-such-bike"
+        os.environ["TRAILTUNE_PROFILE"] = "no-such-bike"
         try:
             with self.assertRaises(RuntimeError):
                 tune.knowledge()
         finally:
-            os.environ["FARDRIVER_PROFILE"] = ""
+            os.environ["TRAILTUNE_PROFILE"] = ""
 
     def test_shipped_knowledge_is_generic(self):
         k = tune.knowledge()

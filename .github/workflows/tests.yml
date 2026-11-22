@@ -21,5 +21,5 @@ jobs:
       - name: Package builds with its knowledge files
         run: |
           uv build --wheel -o dist
-          uv run --python ${{ matrix.python }} --no-project --with dist/*.whl python -I -c "from fardriver_ble import tune; assert tune.knowledge()['settable']"
+          uv run --python ${{ matrix.python }} --no-project --with dist/*.whl python -I -c "from trailtune import tune; assert tune.knowledge()['settable']"
         shell: bash

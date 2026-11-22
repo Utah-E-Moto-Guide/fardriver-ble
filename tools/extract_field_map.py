@@ -5,7 +5,7 @@ address) and records every `rcv_* = ...arg[n]...` assignment: which word(s) of t
 block it reads, plus the expression (for bit masks and scaling).
 
 Input and output both stay in local/ (derived from Fardriver's code, not committed).
-We write our own descriptions from this into fardriver_ble/address_map.py.
+We write our own descriptions from this into trailtune/address_map.py.
 
 Usage: python3 -I tools/extract_field_map.py local/decomp/MotorNet6/MotorNet6/ProControlPage.cs local/field_map.json
 """

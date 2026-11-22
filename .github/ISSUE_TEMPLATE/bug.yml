@@ -12,7 +12,7 @@ body:
     id: report
     attributes:
       label: Controller report (if a controller is involved)
-      description: Output of `fardriver-ble report`. No serial or address in it.
+      description: Output of `trailtune report`. No serial or address in it.
       render: markdown
   - type: input
     id: env

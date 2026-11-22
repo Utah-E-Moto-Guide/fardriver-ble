@@ -14,8 +14,8 @@
 # confidence: high | medium | low
 #
 # `settable` = comfort fields with full notes; limits, steps and tiers for every changeable field
-# live in fardriver_ble/policy.py. `context` = notes for other fields (some changeable, some not).
-# Field names match fardriver_ble/address_map.py.
+# live in trailtune/policy.py. `context` = notes for other fields (some changeable, some not).
+# Field names match trailtune/address_map.py.
 
 settable:
   - field: Throttle acceleration step

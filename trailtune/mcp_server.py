@@ -6,7 +6,7 @@ listed settings only, one step or back to a snapshot value, within limits taken 
 controller's factory reference, optional Save after a pre-save check. No PIN-change, factory reset
 or other command exists. Data (snapshots, sessions, captures) lives in paths.DATA.
 
-Run: .venv/bin/python -m fardriver_ble.mcp_server
+Run: .venv/bin/python -m trailtune.mcp_server
 """
 
 import json
@@ -40,13 +40,13 @@ def refusals_as_text(fn):
 
 
 mcp = MCPServer(
-    "fardriver",
+    "trailtune",
     instructions=(
         "Back up, compare and tune a Fardriver motor controller over Bluetooth. Snapshot tools only read. "
         "fardriver_set and tune_try/keep/revert WRITE settings: one small step at a time, RAM-only unless "
         "saved, never above the controller's factory currents. Before any write, confirm the bike is on a "
         "stand with the driven wheel off the ground, strapped down, phone app closed, hands off the throttle. "
-        "Follow the fardriver-tune skill for tuning."
+        "Follow the trailtune skill for tuning."
     ),
 )
 
@@ -175,7 +175,7 @@ async def fardriver_set(
 
 
 # --- guided tuning (garage-to-trail loop) ------------------------------------
-# Method lives in skills/fardriver-tune/SKILL.md. Knowledge: see tune.py (shipped, bike profile, yours).
+# Method lives in skills/trailtune/SKILL.md. Knowledge: see tune.py (shipped, bike profile, yours).
 
 
 @mcp.tool()

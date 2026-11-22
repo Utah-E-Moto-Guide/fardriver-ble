@@ -25,7 +25,7 @@ Guardrails (policy in policy.py):
 
 Verified 2026-11-21: an unsaved write is RAM-only; a power cycle restores the saved value.
 
-Usage: python -m fardriver_ble.nudge <mac> "<field name>" [<raw value>] [--restore-from SNAPSHOT] [--save]
+Usage: python -m trailtune.nudge <mac> "<field name>" [<raw value>] [--restore-from SNAPSHOT] [--save]
 """
 
 import argparse
@@ -68,7 +68,7 @@ def new_word(name: str, raw: int, current_word: int, specs: dict | None = None) 
         raise PermissionError(f"{name!r} is a never-write field")
     specs = policy.specs(None) if specs is None else specs
     if name not in specs:
-        raise PermissionError(f"{name!r} needs this controller's factory reference (see `python -m fardriver_ble factory`)")
+        raise PermissionError(f"{name!r} needs this controller's factory reference (see `python -m trailtune factory`)")
     if specs[name].requires_nonzero and f.raw(current_word) == 0:
         raise PermissionError(f"{name!r} is 0 on this controller; the app does not write it then")
     lo, hi = raw_range(name, specs)
@@ -309,7 +309,7 @@ async def nudge(
     controllers.write_gate(before.words, specs)  # unverified firmware: read-only unless the rider opts in
     if name not in specs:
         raise PermissionError(f"{name!r} needs a factory reference for controller {before.serial or '(no serial)'}; "
-                              "see `python -m fardriver_ble factory`")
+                              "see `python -m trailtune factory`")
     spec = specs[name]
     word = before.words[f.addr]
     current = f.value(word)

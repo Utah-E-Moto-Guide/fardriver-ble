@@ -1,4 +1,4 @@
-"""Command line: python -m fardriver_ble {scan,snapshot,list,diff,factory,report}"""
+"""Command line: python -m trailtune {scan,snapshot,list,diff,factory,report}"""
 
 import argparse
 import asyncio
@@ -23,7 +23,7 @@ async def scan(seconds: float) -> list[dict]:
 
 
 def main():
-    ap = argparse.ArgumentParser(prog="fardriver_ble")
+    ap = argparse.ArgumentParser(prog="trailtune")
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("scan")
     s.add_argument("--seconds", type=float, default=8)

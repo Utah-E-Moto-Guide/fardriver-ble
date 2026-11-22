@@ -6,7 +6,7 @@ the factory-reference limits would not catch that. So:
 
 - verified firmware (knowledge/controllers.yml): writes allowed, under the usual policy;
 - any other firmware: read-only (backups, diffs, audits) unless the rider opts in with
-  `allow_untested_firmware: true` in <data>/config.yml or FARDRIVER_ALLOW_UNTESTED=1;
+  `allow_untested_firmware: true` in <data>/config.yml or TRAILTUNE_ALLOW_UNTESTED=1;
 - even then, a write is refused if the changeable settings read outside the app's own ranges,
   the clearest sign that the memory layout differs.
 """
@@ -57,7 +57,7 @@ def verified(ident: dict) -> dict | None:
 
 
 def allow_untested() -> bool:
-    env = os.environ.get("FARDRIVER_ALLOW_UNTESTED", "")
+    env = os.environ.get("TRAILTUNE_ALLOW_UNTESTED", "")
     if env:
         return env.lower() in ("1", "true", "yes")
     return bool(paths.config().get("allow_untested_firmware"))
@@ -84,7 +84,7 @@ def write_gate(words: dict[int, int], specs: dict) -> None:
             f"{what} is not on the verified list, so writes are off; backups, diffs and audits still work. "
             "Its memory layout may differ from the verified firmware, and a write could land on the wrong "
             "setting. To try anyway, at your own risk, set `allow_untested_firmware: true` in "
-            f"{paths.CONFIG}. Please share `fardriver-ble report <MAC>` in an issue so it can be verified.")
+            f"{paths.CONFIG}. Please share `trailtune report <MAC>` in an issue so it can be verified.")
     bad = implausible(words, specs)
     if bad:
         raise PermissionError(

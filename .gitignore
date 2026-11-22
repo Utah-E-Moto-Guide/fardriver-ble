@@ -23,7 +23,7 @@ build/
 # local-only reverse-engineering workspace (APK, DLLs, decompiled source, SDK)
 local/
 
-# rider data lives in FARDRIVER_DATA (~/.local/share/fardriver-ble), never in the repo
+# rider data lives in TRAILTUNE_DATA (~/.local/share/trailtune), never in the repo
 /snapshots/
 /captures/
 /sessions/

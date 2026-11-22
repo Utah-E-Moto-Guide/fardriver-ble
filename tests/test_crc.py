@@ -1,6 +1,6 @@
 import unittest
 
-from fardriver_ble.crc import command_frame, crc16_bytes, frame_ok
+from trailtune.crc import command_frame, crc16_bytes, frame_ok
 
 
 class CrcTest(unittest.TestCase):

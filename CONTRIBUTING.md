@@ -4,10 +4,10 @@ Thanks for helping. The most useful contributions don't need any code.
 
 ## Report your controller
 
-Run `fardriver-ble report <MAC>` and open a **Controller report** issue with the output. It lists
+Run `trailtune report <MAC>` and open a **Controller report** issue with the output. It lists
 the firmware and model codes and whether the settings read sensibly, without the serial number or
 Bluetooth address. A firmware is added to the verified list
-(`fardriver_ble/knowledge/controllers.yml`) once someone has confirmed on it that:
+(`trailtune/knowledge/controllers.yml`) once someone has confirmed on it that:
 
 1. a snapshot completes and the `.heb` backup imports into the phone app;
 2. `fardriver_show` values match what the phone app shows (a few settings, including currents);
@@ -19,7 +19,7 @@ down.
 
 ## Add a bike profile
 
-Copy `fardriver_ble/knowledge/profiles/xpro-drax-apex.yml` to `profiles/<make-model>.yml`. Every
+Copy `trailtune/knowledge/profiles/xpro-drax-apex.yml` to `profiles/<make-model>.yml`. Every
 note needs a `source` (`manual`, `app`, `owner`, `session`, `community`, `reasoning`) and a
 `confidence` (`high`, `medium`, `low`). Credit community guides in `THIRD_PARTY_NOTICES.md`, write
 in your own words, and don't name individual owners. The tests check that every profile loads and

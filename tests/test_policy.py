@@ -1,9 +1,9 @@
 import asyncio
 import unittest
 
-from fardriver_ble import nudge, policy
-from fardriver_ble import snapshot as snap
-from fardriver_ble.address_map import faults
+from trailtune import nudge, policy
+from trailtune import snapshot as snap
+from trailtune.address_map import faults
 
 from . import SNAPSHOTS
 

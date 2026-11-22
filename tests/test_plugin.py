@@ -20,7 +20,7 @@ class PluginManifestTest(unittest.TestCase):
                       [{k: p[k] for k in ("name", "source")} for p in m["plugins"]])
 
     def test_mcp_server_runs_a_real_entry_point(self):
-        server = self.plugin["mcpServers"]["fardriver"]
+        server = self.plugin["mcpServers"]["trailtune"]
         self.assertEqual(server["command"], "uv")
         self.assertIn("${CLAUDE_PLUGIN_ROOT}", server["args"])
         self.assertIn(server["args"][-1], self.project["scripts"])
@@ -31,7 +31,7 @@ class PluginManifestTest(unittest.TestCase):
         self.assertFalse((ROOT / ".mcp.json").exists())
 
     def test_skill_ships(self):
-        self.assertTrue((ROOT / "skills/fardriver-tune/SKILL.md").exists())
+        self.assertTrue((ROOT / "skills/trailtune/SKILL.md").exists())
 
 
 if __name__ == "__main__":

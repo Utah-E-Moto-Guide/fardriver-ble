@@ -1,7 +1,7 @@
 import unittest
 
-from fardriver_ble import report
-from fardriver_ble import snapshot as snap
+from trailtune import report
+from trailtune import snapshot as snap
 
 from . import SNAPSHOTS
 

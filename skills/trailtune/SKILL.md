@@ -1,6 +1,6 @@
 ---
-name: fardriver-tune
-description: Guided, garage-to-trail tuning of a Fardriver motor controller (e-moto, e-bike, scooter) through the `fardriver` MCP tools. Use when the rider wants to change how the bike rides (throttle feel, smoothness, ECO vs Sport, roll-off, regen, gear modes), asks what a setting does, wants a settings audit or backup, or reports how a change felt on a ride.
+name: trailtune
+description: Guided, garage-to-trail tuning of a Fardriver motor controller (e-moto, e-bike, scooter) through the `trailtune` MCP tools. Use when the rider wants to change how the bike rides (throttle feel, smoothness, ECO vs Sport, roll-off, regen, gear modes), asks what a setting does, wants a settings audit or backup, or reports how a change felt on a ride.
 ---
 
 # Fardriver tuning
@@ -22,7 +22,7 @@ logged session. The bike's safety and the rider's trust matter more than speed.
    The first snapshot of a controller becomes its **factory reference**: current ceilings, the top
    RPM and boost time are taken from it. Ask whether the bike is still on stock settings. If it was
    tuned before (dealer, previous owner), the limits would start from the tuned values: have them
-   point the reference at a stock backup (`python -m fardriver_ble factory <stock .heb> --serial ...`).
+   point the reference at a stock backup (`python -m trailtune factory <stock .heb> --serial ...`).
    `fardriver_settable` shows the limits for this controller.
 4. If `fardriver_settable` shows `writes: off` (firmware not verified), say so plainly: backups,
    diffs and the audit work, but this firmware may store settings at different addresses, so a write
@@ -30,7 +30,7 @@ logged session. The bike's safety and the rider's trust matter more than speed.
    (`allow_untested_firmware: true` in config.yml), start with one comfort setting, read it back,
    and ask them to report the result so the firmware can be verified.
 5. Ask what bike it is. If a bike profile fits (`tune_knowledge` lists the active `layers`; profiles
-   ship in `fardriver_ble/knowledge/profiles/`), suggest turning it on in the data folder's
+   ship in `trailtune/knowledge/profiles/`), suggest turning it on in the data folder's
    `config.yml`. Without one, give only generic advice and say so.
 
 ## Knowledge, and how to speak about it
@@ -117,7 +117,7 @@ behaving differently, a value not sticking after a power cycle. Any of these: re
 
 ## Hard limits (the tools enforce them; don't try to work around them)
 
-- The sanity rules in `fardriver_ble/policy.py` (factory current ceiling, boost >= max, gear order,
+- The sanity rules in `trailtune/policy.py` (factory current ceiling, boost >= max, gear order,
   limiter <= factory, max regen >= normal, power curve never rising) cannot be overridden.
 - Never-write fields stay locked: voltage cutoffs and restores, temperature limits, PID, motor
   matching (AN, LM, pole pairs, sensor), calibration, brake / park / interlock / pin wiring,

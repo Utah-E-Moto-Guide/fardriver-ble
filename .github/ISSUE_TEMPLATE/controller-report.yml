@@ -1,12 +1,12 @@
 name: Controller report
-description: Tell us how fardriver-ble worked with your controller, so its firmware can be verified.
+description: Tell us how trailtune worked with your controller, so its firmware can be verified.
 labels: [controller-report]
 body:
   - type: markdown
     attributes:
       value: |
         Thanks! Reports like this are how new firmware gets onto the verified list.
-        Run `fardriver-ble report <MAC>` (or `fardriver-ble report` for your latest backup) and paste the output.
+        Run `trailtune report <MAC>` (or `trailtune report` for your latest backup) and paste the output.
         It has no serial number or Bluetooth address.
   - type: textarea
     id: report

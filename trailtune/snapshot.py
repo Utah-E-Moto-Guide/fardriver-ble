@@ -13,7 +13,7 @@ export (156 main words + 192 second-section words).
 Factory reference: the first snapshot ever read from a controller (by serial) is kept in
 <data>/factory/<serial>.json. The write tools take their current ceilings and RPM limits from it, so
 they fit whatever controller is connected. If the controller was already modified before its first
-snapshot, point the reference at a stock backup: `python -m fardriver_ble factory <snapshot or .heb>`.
+snapshot, point the reference at a stock backup: `python -m trailtune factory <snapshot or .heb>`.
 """
 
 import asyncio

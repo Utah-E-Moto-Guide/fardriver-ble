@@ -1,8 +1,8 @@
 import os
 import unittest
 
-from fardriver_ble import controllers, policy
-from fardriver_ble import snapshot as snap
+from trailtune import controllers, policy
+from trailtune import snapshot as snap
 
 from . import SNAPSHOTS
 
@@ -18,7 +18,7 @@ def other_firmware(words, software=81):
 
 class FirmwareGateTest(unittest.TestCase):
     def tearDown(self):
-        os.environ["FARDRIVER_ALLOW_UNTESTED"] = ""
+        os.environ["TRAILTUNE_ALLOW_UNTESTED"] = ""
 
     def test_fixture_identity(self):
         ident = controllers.identity(BASE.words)
@@ -36,11 +36,11 @@ class FirmwareGateTest(unittest.TestCase):
         self.assertIn("allow_untested_firmware", str(e.exception))
 
     def test_opt_in_allows_plausible_untested_firmware(self):
-        os.environ["FARDRIVER_ALLOW_UNTESTED"] = "1"
+        os.environ["TRAILTUNE_ALLOW_UNTESTED"] = "1"
         controllers.write_gate(other_firmware(BASE.words), SPECS)
 
     def test_opt_in_still_refuses_an_implausible_layout(self):
-        os.environ["FARDRIVER_ALLOW_UNTESTED"] = "1"
+        os.environ["TRAILTUNE_ALLOW_UNTESTED"] = "1"
         w = other_firmware(BASE.words)
         f = policy.NAMES["Battery capacity"]
         w[f.addr] = 4000  # far outside 20..250 Ah: this word means something else on this firmware
