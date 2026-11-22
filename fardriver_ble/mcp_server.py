@@ -128,6 +128,14 @@ def fardriver_settable(serial: str = "") -> str:
         out["note"] = ("No factory reference chosen, so currents, RPM, boost time and the power curve are not listed "
                        "and cannot be changed. Take a snapshot first" + (f"; known controllers: {[r['serial'] for r in refs]}"
                                                                          if refs else "") + ".")
+    if ref is not None:
+        from . import controllers
+
+        ident = controllers.identity(ref.words)
+        out["controller"] = {**ident, "verified": controllers.verified(ident),
+                             "writes": "on" if controllers.verified(ident) else
+                             ("on, untested firmware (rider opted in)" if controllers.allow_untested() else
+                              "off: firmware not verified (see allow_untested_firmware)")}
     out["fields"] = policy.describe(policy.factory_values(ref))
     out["rules"] = policy.__doc__.split("Hard rules")[1].strip()
     return json.dumps(out, indent=1)

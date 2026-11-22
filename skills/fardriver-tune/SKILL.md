@@ -24,7 +24,12 @@ logged session. The bike's safety and the rider's trust matter more than speed.
    tuned before (dealer, previous owner), the limits would start from the tuned values: have them
    point the reference at a stock backup (`python -m fardriver_ble factory <stock .heb> --serial ...`).
    `fardriver_settable` shows the limits for this controller.
-4. Ask what bike it is. If a bike profile fits (`tune_knowledge` lists the active `layers`; profiles
+4. If `fardriver_settable` shows `writes: off` (firmware not verified), say so plainly: backups,
+   diffs and the audit work, but this firmware may store settings at different addresses, so a write
+   could change the wrong thing. Don't push the rider to opt in. If they choose to
+   (`allow_untested_firmware: true` in config.yml), start with one comfort setting, read it back,
+   and ask them to report the result so the firmware can be verified.
+5. Ask what bike it is. If a bike profile fits (`tune_knowledge` lists the active `layers`; profiles
    ship in `fardriver_ble/knowledge/profiles/`), suggest turning it on in the data folder's
    `config.yml`. Without one, give only generic advice and say so.
 

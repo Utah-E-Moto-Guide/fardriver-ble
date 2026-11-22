@@ -14,6 +14,10 @@ by talking to Claude (or from the command line) instead of poking at the phone a
 It works with Fardriver controllers that advertise over BLE as `YUANQU…`, `CONTROL…` or `BMS…`
 (the names the official app looks for). Developed and tested on an X-Pro Drax Apex (WC72V150).
 
+**Verified firmware:** HA80 (WC72V150AB_17_1ZHA80). Backups, diffs and audits work on any Fardriver
+controller; **writes are off on other firmware** until you opt in, because another firmware may store
+settings at different addresses. See [Other controllers](#other-controllers).
+
 ## Safety first
 
 This tool **can write settings and save them to the controller**. It is careful by design, but you
@@ -29,6 +33,7 @@ are working on a vehicle:
 
 What it will and won't do:
 
+- Writes only on verified firmware unless you opt in (see [Other controllers](#other-controllers)).
 - Changes one setting at a time, in small steps, within the app's own ranges.
 - Currents can only go **down** from your controller's factory values, never up. The limits come
   from the first backup of *your* controller (see [Factory reference](#factory-reference)).
@@ -86,7 +91,7 @@ captures/       raw Bluetooth logs of every write and save
 sessions/       tuning sessions: goal, each change, how it felt, kept or reverted
 factory/        your controller's factory reference, by serial number
 knowledge.yml   your own notes, merged into the tuning knowledge (optional)
-config.yml      e.g. `profiles: [xpro-drax-apex]` (optional)
+config.yml      optional settings, see below
 ```
 
 ### Factory reference
@@ -102,6 +107,22 @@ model:
 ```sh
 .venv/bin/fardriver-ble factory path/to/stock.heb --serial <your controller's serial>
 ```
+
+### Other controllers
+
+Writes are verified only on the firmware listed in
+[`fardriver_ble/knowledge/controllers.yml`](fardriver_ble/knowledge/controllers.yml). On anything
+else the tool still backs up, compares and audits, but refuses to change settings, because a
+different firmware may keep a setting at a different address and a write could land on the wrong
+one. To try writes anyway, at your own risk, add this to your data folder's `config.yml`:
+
+```yaml
+allow_untested_firmware: true
+```
+
+Even then, a write is refused if the controller's settings read outside their normal ranges, which
+is a strong sign its memory layout differs. If your controller works (or doesn't), please open an
+issue so it can be added to the verified list.
 
 ### Bike profiles
 
