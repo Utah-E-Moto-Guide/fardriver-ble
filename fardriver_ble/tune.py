@@ -49,9 +49,7 @@ def active_profiles() -> list[str]:
     env = os.environ.get("FARDRIVER_PROFILE")
     if env is not None:
         return [x.strip() for x in env.split(",") if x.strip()]
-    if paths.CONFIG.exists():
-        return list(_read_yaml(paths.CONFIG).get("profiles") or [])
-    return []
+    return list(paths.config().get("profiles") or [])
 
 
 def knowledge_layers() -> list[tuple[str, Path]]:

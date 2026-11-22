@@ -9,7 +9,8 @@ Override with FARDRIVER_DATA, e.g. a private git repo of your own to keep the hi
     sessions/        tuning session logs
     factory/         the factory reference of each controller, by serial (see snapshot.py)
     knowledge.yml    your own notes, merged into the shipped knowledge (optional)
-    config.yml       e.g. `profiles: [xpro-drax-apex]` to add a bike profile's notes (optional)
+    config.yml       optional: `profiles: [xpro-drax-apex]` (bike profile notes),
+                     `allow_untested_firmware: true` (writes on unverified firmware, at your own risk)
 """
 
 import os
@@ -40,3 +41,13 @@ CONFIG = DATA / "config.yml"
 PACKAGE = Path(__file__).resolve().parent
 KNOWLEDGE = PACKAGE / "knowledge" / "settings.yml"
 PROFILES = PACKAGE / "knowledge" / "profiles"
+
+
+def config() -> dict:
+    """<data>/config.yml as a dict ({} if missing)."""
+    if not CONFIG.exists():
+        return {}
+    import yaml
+
+    return yaml.safe_load(CONFIG.read_text(encoding="utf-8")) or {}
+

@@ -1,0 +1,16 @@
+# Controller firmwares this tool has been verified on. On any other firmware, backups and diffs work,
+# but writes stay off until the rider opts in (allow_untested_firmware in <data>/config.yml).
+#
+# The key is the firmware code and software version the controller reports (words 0x86-0x87),
+# e.g. firmware HA + software 80 = "HA80", the tail of a model name like WC72V150AB_17_1ZHA80.
+# Adding one: run `fardriver-ble report <MAC>` and open an issue with its output and what you tested.
+
+verified:
+  - firmware: HA
+    software: 80
+    model: WC72V150AB_17_1ZHA80 (X-Pro Drax Apex)
+    verified: 2026-11-21
+    tested: >-
+      full read twice-confirmed; .heb export matches the phone app's; RAM-only writes in every tier
+      (comfort, caution, high) read back and restored; Save and power-cycle persistence; fault watch;
+      brake signal (0xE3 bit 15).

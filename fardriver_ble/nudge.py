@@ -4,6 +4,7 @@ Guardrails (policy in policy.py):
 - Only fields in policy.TIER, never a never-write field; limits and step sizes in display units,
   from policy.specs(this controller's factory values). Without a factory reference for the
   connected controller, the controller-dependent fields (currents, RPM, boost, power curve) are refused.
+- Only on verified firmware (controllers.py), unless the rider opts in for an untested one.
 - The proposed state must pass policy.violations (factory current ceiling, gear order, regen order,
   power curve never rising, ...). High-tier fields (currents, power curve) need acknowledge_risk.
 - After every write the controller's fault bits (0xE3) are watched; a new fault makes the tool
@@ -37,7 +38,7 @@ from pathlib import Path
 from bleak import BleakClient
 
 from . import snapshot as snap
-from . import paths, policy
+from . import controllers, paths, policy
 from .address_map import FAULT_MASK, FIELDS, brake_on, faults, risk
 from .decode import frame_block
 from .listen import CHAR, Framer
@@ -305,6 +306,7 @@ async def nudge(
     ref = snap.factory_reference(before.serial) if before.serial else None
     factory = policy.factory_values(ref)
     specs = policy.specs(factory)
+    controllers.write_gate(before.words, specs)  # unverified firmware: read-only unless the rider opts in
     if name not in specs:
         raise PermissionError(f"{name!r} needs a factory reference for controller {before.serial or '(no serial)'}; "
                               "see `python -m fardriver_ble factory`")
